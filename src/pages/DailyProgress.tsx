@@ -339,7 +339,7 @@ const DailyProgress = () => {
                       );
                     })}
                   </div>
-                  <button onClick={() => setStep(5)}
+                  <button onClick={() => setStep(noteStep)}
                     disabled={pendingTasks.some(t => !completedTaskIds.includes(t.id) && !failedTaskIds.includes(t.id))}
                     className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-3.5 rounded-lg hover:opacity-90 transition-opacity shadow-sand disabled:opacity-50">
                     التالي
