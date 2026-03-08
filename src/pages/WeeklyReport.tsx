@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   loadJourney, getWeeklyLogs, getWeeklyScore, getWeeklyRating,
-  getAxisWeakness, getDistractionStats, getWeeklyNotes, AXIS_LABELS, JourneyData
+  getAxisWeakness, getDistractionStats, getWeeklyNotes, AXIS_LABELS, JourneyData, getAllAxisMaxScores
 } from "@/lib/store";
 import { Footprints, TrendingUp, BarChart3, FileText, AlertTriangle, BookOpen, ShieldAlert } from "lucide-react";
 
