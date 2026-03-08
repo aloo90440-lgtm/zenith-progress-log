@@ -306,8 +306,8 @@ const DailyProgress = () => {
                 );
               })()}
 
-              {/* Step 4: Appended Tasks (conditional) */}
-              {step === 4 && hasAppendedStep && (
+              {/* Appended Tasks step */}
+              {step === appendedStep && hasAppendedStep && (
                 <div>
                   <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المهام التعويضية</p>
                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">مهام مُلحقة من أيام سابقة</h2>
