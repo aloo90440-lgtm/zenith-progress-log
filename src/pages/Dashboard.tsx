@@ -1,31 +1,61 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { getProfile, getDailyLogs, DbProfile, DbDailyLog } from "@/lib/supabase-store";
 import {
-  loadJourney, getStreak, getTodayStr, getAverageDaily, getWeeklyScore,
-  getWeeklyRating, getSmartReminder, getHeatmapData, JourneyData
+  getStreak, getTodayStr, getDateOffset, getWeeklyRating,
+  getMotivationalMessage
 } from "@/lib/store";
 import { Footprints, TrendingUp, Settings, BarChart3, FileText } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState<JourneyData | null>(null);
+  const [profile, setProfile] = useState<DbProfile | null>(null);
+  const [logs, setLogs] = useState<DbDailyLog[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const journey = loadJourney();
-    if (!journey.user) { navigate("/setup"); return; }
-    setData(journey);
+    Promise.all([getProfile(), getDailyLogs()]).then(([p, l]) => {
+      if (!p || !p.primary_goal) { navigate("/setup"); return; }
+      setProfile(p);
+      setLogs(l);
+      setLoading(false);
+    });
   }, [navigate]);
 
-  if (!data || !data.user) return null;
+  if (loading || !profile) return <div className="min-h-screen gradient-desert flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
-  const streak = getStreak(data.logs);
-  const todayLog = data.logs.find(l => l.date === getTodayStr());
-  const avgDaily = getAverageDaily(data.logs);
-  const weeklyScore = getWeeklyScore(data.logs);
+  // Convert DbDailyLog to format needed for calculations
+  const today = getTodayStr();
+  const todayLog = logs.find(l => l.date === today);
+
+  // Calculate streak
+  let streak = 0;
+  let checkDate = new Date(today);
+  for (let i = 0; i < 365; i++) {
+    const dateStr = checkDate.toISOString().slice(0, 10);
+    const found = logs.find(l => l.date === dateStr && l.total_score > 0);
+    if (found) streak++;
+    else if (i > 0) break;
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  // Weekly
+  const weekAgo = getDateOffset(today, -6);
+  const weeklyLogs = logs.filter(l => l.date >= weekAgo && l.date <= today);
+  const weeklyScore = weeklyLogs.reduce((s, l) => s + l.total_score, 0);
   const weeklyRating = getWeeklyRating(weeklyScore);
-  const heatmap = getHeatmapData(data.logs, 28);
-  const isLowPerformance = avgDaily < 20 && data.logs.length > 2;
+
+  const avgDaily = logs.length > 0 ? Math.round(logs.reduce((s, l) => s + l.total_score, 0) / logs.length) : 0;
+  const isLowPerformance = avgDaily < 20 && logs.length > 2;
+
+  // Heatmap
+  const heatmap: Array<{ date: string; score: number }> = [];
+  for (let i = 27; i >= 0; i--) {
+    const d = getDateOffset(today, -i);
+    const log = logs.find(l => l.date === d);
+    heatmap.push({ date: d, score: log?.total_score || 0 });
+  }
 
   return (
     <div className="min-h-screen gradient-desert px-6 py-8 pb-24" dir="rtl">
@@ -33,7 +63,7 @@ const Dashboard = () => {
         {/* Header */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-dust text-xs tracking-[0.2em] font-sans-ui">مرحبًا، {data.user.name}</p>
+            <p className="text-dust text-xs tracking-[0.2em] font-sans-ui">مرحبًا، {profile.name}</p>
             <h1 className="font-serif-display text-2xl sm:text-3xl font-semibold text-foreground mt-1">رحلتك</h1>
           </div>
           <Link to="/settings" className="p-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -45,14 +75,16 @@ const Dashboard = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
           className="bg-card/50 border border-border/50 rounded-xl p-4 mb-6">
           <p className="text-xs text-muted-foreground font-sans-ui mb-1">🎯 هدفك</p>
-          <p className="text-foreground text-sm font-medium">{data.user.primaryGoal}</p>
+          <p className="text-foreground text-sm font-medium">{profile.primary_goal}</p>
         </motion.div>
 
         {/* Smart Reminder */}
         {isLowPerformance && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
             className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6">
-            <p className="text-primary text-sm font-sans-ui leading-relaxed">{getSmartReminder(data.user)}</p>
+            <p className="text-primary text-sm font-sans-ui leading-relaxed">
+              تذكّر هدفك: "{profile.primary_goal}" — لأنه مهم لك: "{profile.goal_importance.split('\n')[0]}..."
+            </p>
           </motion.div>
         )}
 
@@ -68,7 +100,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-3 gap-3 mb-6">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
             className="bg-card border border-border rounded-xl p-4 text-center shadow-sand">
-            <p className="text-2xl font-serif-display font-semibold text-foreground">{todayLog?.totalScore ?? '—'}</p>
+            <p className="text-2xl font-serif-display font-semibold text-foreground">{todayLog?.total_score ?? '—'}</p>
             <p className="text-muted-foreground text-[10px] mt-1 font-sans-ui">نقاط اليوم</p>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}

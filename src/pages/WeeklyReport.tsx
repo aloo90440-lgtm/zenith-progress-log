@@ -1,42 +1,63 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  loadJourney, getWeeklyLogs, getWeeklyScore, getWeeklyRating,
-  getAxisWeakness, getDistractionStats, getWeeklyNotes, AXIS_LABELS, JourneyData, getAllAxisMaxScores
-} from "@/lib/store";
+import { getProfile, getDailyLogs, DbProfile, DbDailyLog } from "@/lib/supabase-store";
+import { getWeeklyRating, getDateOffset, getTodayStr, getAllAxisMaxScores, AXIS_LABELS } from "@/lib/store";
 import { Footprints, TrendingUp, BarChart3, FileText, AlertTriangle, BookOpen, ShieldAlert } from "lucide-react";
 
 const WeeklyReport = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState<JourneyData | null>(null);
+  const [profile, setProfile] = useState<DbProfile | null>(null);
+  const [logs, setLogs] = useState<DbDailyLog[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const journey = loadJourney();
-    if (!journey.user) { navigate("/setup"); return; }
-    setData(journey);
+    const load = async () => {
+      const p = await getProfile();
+      if (!p || !p.primary_goal) { navigate("/setup"); return; }
+      setProfile(p);
+      const l = await getDailyLogs();
+      setLogs(l);
+      setLoading(false);
+    };
+    load();
   }, [navigate]);
 
-  if (!data) return null;
+  if (loading || !profile) return <div className="min-h-screen gradient-desert flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
-  const weeklyLogs = getWeeklyLogs(data.logs);
-  const weeklyScore = getWeeklyScore(data.logs);
+  const today = getTodayStr();
+  const weekAgo = getDateOffset(today, -6);
+  const weeklyLogs = logs.filter(l => l.date >= weekAgo && l.date <= today).sort((a, b) => a.date.localeCompare(b.date));
+  const weeklyScore = weeklyLogs.reduce((s, l) => s + l.total_score, 0);
   const rating = getWeeklyRating(weeklyScore);
-  const weakness = getAxisWeakness(data.logs);
-  const distractionStats = getDistractionStats(data.logs);
-  const notes = getWeeklyNotes(data.logs);
 
-  // Axis breakdown with weighted max
-  const weights = data.user!.axisWeights;
+  const weights = profile.axis_weights;
   const maxScores = getAllAxisMaxScores(weights);
+
   const axisTotals = { mental: 0, physical: 0, religious: 0 };
-  const distractionTotal = weeklyLogs.reduce((s, l) => s + l.distraction.points, 0);
+  const distractionTotal = weeklyLogs.reduce((s, l) => s + l.distraction_points, 0);
   for (const l of weeklyLogs) {
-    axisTotals.mental += l.axes.mental.finalScore;
-    axisTotals.physical += l.axes.physical.finalScore;
-    axisTotals.religious += l.axes.religious.finalScore;
+    axisTotals.mental += l.mental_final_score;
+    axisTotals.physical += l.physical_final_score;
+    axisTotals.religious += l.religious_final_score;
   }
-  const maxPerDay = { mental: maxScores.mental, physical: maxScores.physical, religious: maxScores.religious };
+
+  // Weakness
+  const labels: Record<string, string> = { mental: 'الذهني', physical: 'الجسدي', religious: 'الديني' };
+  let weakness: string | null = null;
+  if (weeklyLogs.length > 0) {
+    const min = Math.min(axisTotals.mental, axisTotals.physical, axisTotals.religious);
+    const weakAxis = Object.entries(axisTotals).find(([, v]) => v === min);
+    weakness = weakAxis ? labels[weakAxis[0]] : null;
+  }
+
+  // Distraction stats
+  const cleanDays = weeklyLogs.filter(l => l.distraction_tier === 'none').length;
+
+  // Notes
+  const notes = weeklyLogs
+    .filter(l => l.daily_note.trim())
+    .map(l => ({ date: l.date, note: l.daily_note }));
 
   return (
     <div className="min-h-screen gradient-desert px-6 py-8 pb-24" dir="rtl">
@@ -52,7 +73,6 @@ const WeeklyReport = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Score & Rating */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               className="bg-card border border-border rounded-xl p-6 text-center shadow-sand">
               <p className="text-5xl font-serif-display font-bold text-foreground">{weeklyScore}</p>
@@ -60,12 +80,11 @@ const WeeklyReport = () => {
               <p className={`text-lg font-serif-display font-semibold mt-2 ${rating.color}`}>{rating.label}</p>
             </motion.div>
 
-            {/* Axis Performance */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
               className="bg-card border border-border rounded-xl p-5 shadow-sand">
               <h3 className="text-sm font-sans-ui text-muted-foreground mb-4">أداء المحاور</h3>
               {(Object.entries(axisTotals) as Array<['mental' | 'physical' | 'religious', number]>).map(([key, total]) => {
-                const maxForAxis = weeklyLogs.length * maxPerDay[key];
+                const maxForAxis = weeklyLogs.length * maxScores[key];
                 return (
                   <div key={key} className="mb-3 last:mb-0">
                     <div className="flex justify-between text-sm font-sans-ui mb-1">
@@ -89,7 +108,6 @@ const WeeklyReport = () => {
               </div>
             </motion.div>
 
-            {/* Weakness */}
             {weakness && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                 className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 flex items-start gap-3">
@@ -101,19 +119,15 @@ const WeeklyReport = () => {
               </motion.div>
             )}
 
-            {/* Distraction Stats */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
               className="bg-card border border-border rounded-xl p-4 flex items-start gap-3 shadow-sand">
               <ShieldAlert className="w-5 h-5 text-accent mt-0.5 shrink-0" />
               <div>
                 <p className="text-foreground text-sm font-sans-ui font-medium">إحصائيات المشتتات</p>
-                <p className="text-muted-foreground text-xs mt-1">
-                  أيام بدون مشتتات: {distractionStats.clean} من {distractionStats.total}
-                </p>
+                <p className="text-muted-foreground text-xs mt-1">أيام بدون مشتتات: {cleanDays} من {weeklyLogs.length}</p>
               </div>
             </motion.div>
 
-            {/* Weekly Notes / Reflections */}
             {notes.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
                 className="bg-card border border-border rounded-xl p-5 shadow-sand">
@@ -135,7 +149,6 @@ const WeeklyReport = () => {
         )}
       </div>
 
-      {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-6 py-3 z-50">
         <div className="max-w-2xl mx-auto flex justify-around">
           <Link to="/dashboard" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">

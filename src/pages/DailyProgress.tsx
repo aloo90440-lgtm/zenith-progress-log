@@ -2,86 +2,117 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  loadJourney, saveDailyLog, getTodayStr, getMotivationalMessage,
-  getAxisScore, getDistractionScore, checkConsecutiveDistraction,
-  calculateDailyTotal, getPendingAppendedTasks, getAllAxisMaxScores,
-  TaskStatus, DistractionTier, AxisEntry, AppendedTask,
+  getAxisScore, getDistractionScore, calculateDailyTotal,
+  getAllAxisMaxScores, getMotivationalMessage, getTodayStr,
+  TaskStatus, DistractionTier,
   AXIS_LABELS, STATUS_LABELS, DISTRACTION_LABELS,
 } from "@/lib/store";
+import {
+  getProfile, getTodayLog, saveDailyLogDb, getPendingAppendedTasksDb,
+  markTaskCompleted, generateAndSaveAppendedTasks, checkConsecutiveDistractionDb,
+  DbProfile, DbAppendedTask,
+} from "@/lib/supabase-store";
 import { Footprints, TrendingUp, BarChart3, FileText, CheckCircle2, XCircle } from "lucide-react";
 
 const DailyProgress = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(0); // 0=distraction, 1=mental, 2=physical, 3=religious, 4=appended, 5=note, 6=done
+  const [step, setStep] = useState(0);
   const [distraction, setDistraction] = useState<DistractionTier | null>(null);
   const [mentalStatus, setMentalStatus] = useState<TaskStatus | null>(null);
   const [physicalStatus, setPhysicalStatus] = useState<TaskStatus | null>(null);
   const [religiousStatus, setReligiousStatus] = useState<TaskStatus | null>(null);
   const [dailyNote, setDailyNote] = useState("");
   const [message, setMessage] = useState("");
-  const [pendingTasks, setPendingTasks] = useState<AppendedTask[]>([]);
+  const [pendingTasks, setPendingTasks] = useState<(DbAppendedTask & { id: string })[]>([]);
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
   const [failedTaskIds, setFailedTaskIds] = useState<string[]>([]);
   const [totalScore, setTotalScore] = useState(0);
+  const [profile, setProfile] = useState<DbProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const journey = loadJourney();
-    if (!journey.user) { navigate("/setup"); return; }
-    const pending = getPendingAppendedTasks(journey, getTodayStr());
-    setPendingTasks(pending);
+    const load = async () => {
+      const p = await getProfile();
+      if (!p || !p.primary_goal) { navigate("/setup"); return; }
+      setProfile(p);
 
-    // Load existing today entry
-    const today = journey.logs.find(l => l.date === getTodayStr());
-    if (today) {
-      setDistraction(today.distraction.tier);
-      setMentalStatus(today.axes.mental.finalScore === 10 ? 'completed' : today.axes.mental.finalScore === 7 ? 'minor_lack' : today.axes.mental.finalScore === 3 ? 'major_lack' : 'not_done');
-      setPhysicalStatus(today.axes.physical.finalScore === 10 ? 'completed' : today.axes.physical.finalScore === 7 ? 'minor_lack' : today.axes.physical.finalScore === 3 ? 'major_lack' : 'not_done');
-      setReligiousStatus(today.axes.religious.finalScore === 10 ? 'completed' : today.axes.religious.finalScore === 7 ? 'minor_lack' : today.axes.religious.finalScore === 3 ? 'major_lack' : 'not_done');
-      setDailyNote(today.dailyNote);
-    }
+      const pending = await getPendingAppendedTasksDb(getTodayStr());
+      setPendingTasks(pending);
+
+      const todayLog = await getTodayLog();
+      if (todayLog) {
+        setDistraction(todayLog.distraction_tier as DistractionTier);
+        setMentalStatus(todayLog.mental_status as TaskStatus);
+        setPhysicalStatus(todayLog.physical_status as TaskStatus);
+        setReligiousStatus(todayLog.religious_status as TaskStatus);
+        setDailyNote(todayLog.daily_note);
+      }
+
+      setLoading(false);
+    };
+    load();
   }, [navigate]);
 
+  if (loading || !profile) return <div className="min-h-screen gradient-desert flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+
+  const weights = profile.axis_weights;
+  const maxScores = getAllAxisMaxScores(weights);
   const hasAppendedStep = pendingTasks.length > 0;
-  const totalSteps = hasAppendedStep ? 7 : 6; // distraction, 3 axes, [appended], note, done
+  const totalSteps = hasAppendedStep ? 7 : 6;
 
-  const getStepIndex = (logicalStep: number) => {
-    if (!hasAppendedStep && logicalStep >= 4) return logicalStep + 1;
-    return logicalStep;
-  };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!distraction || !mentalStatus || !physicalStatus || !religiousStatus) return;
 
-    const data = loadJourney();
-    const weights = data.user!.axisWeights;
-    const maxScores = getAllAxisMaxScores(weights);
     const distractionEntry = getDistractionScore(distraction);
-    const axes = {
-      mental: { ...getAxisScore(mentalStatus, maxScores.mental), status: mentalStatus } as AxisEntry,
-      physical: { ...getAxisScore(physicalStatus, maxScores.physical), status: physicalStatus } as AxisEntry,
-      religious: { ...getAxisScore(religiousStatus, maxScores.religious), status: religiousStatus } as AxisEntry,
-    };
+    const mentalScore = getAxisScore(mentalStatus, maxScores.mental);
+    const physicalScore = getAxisScore(physicalStatus, maxScores.physical);
+    const religiousScore = getAxisScore(religiousStatus, maxScores.religious);
 
-    const consecutive = checkConsecutiveDistraction(data.logs, getTodayStr());
+    const consecutive = await checkConsecutiveDistractionDb(getTodayStr());
     const recoveredPoints = completedTaskIds.reduce((sum, id) => {
       const t = pendingTasks.find(t => t.id === id);
-      return sum + (t?.pointsToReclaim || 0);
+      return sum + (t?.points_to_reclaim || 0);
     }, 0);
 
-    const total = calculateDailyTotal(axes, distractionEntry, consecutive, recoveredPoints);
+    const axes = {
+      mental: mentalScore,
+      physical: physicalScore,
+      religious: religiousScore,
+    };
+
+    const axisTotal = axes.mental.finalScore + axes.physical.finalScore + axes.religious.finalScore;
+    const total = consecutive ? 0 : Math.min(40, axisTotal + distractionEntry.points + recoveredPoints);
     setTotalScore(total);
 
-    saveDailyLog({
+    await saveDailyLogDb({
       date: getTodayStr(),
-      distraction: distractionEntry,
-      axes,
-      appendedTasksCompleted: completedTaskIds,
-      appendedTasksFailed: failedTaskIds,
-      dailyNote: dailyNote.trim(),
-      totalScore: total,
-      consecutiveDistraction: consecutive,
-      createdAt: new Date().toISOString(),
+      distraction_tier: distraction,
+      distraction_points: distractionEntry.points,
+      distraction_istighfar: distractionEntry.istighfarMinutes,
+      mental_status: mentalStatus,
+      mental_base_score: mentalScore.baseScore,
+      mental_deduction: mentalScore.deduction,
+      mental_final_score: mentalScore.finalScore,
+      physical_status: physicalStatus,
+      physical_base_score: physicalScore.baseScore,
+      physical_deduction: physicalScore.deduction,
+      physical_final_score: physicalScore.finalScore,
+      religious_status: religiousStatus,
+      religious_base_score: religiousScore.baseScore,
+      religious_deduction: religiousScore.deduction,
+      religious_final_score: religiousScore.finalScore,
+      daily_note: dailyNote.trim(),
+      total_score: total,
+      consecutive_distraction: consecutive,
     });
+
+    // Mark completed appended tasks
+    for (const id of completedTaskIds) {
+      await markTaskCompleted(id);
+    }
+
+    // Generate new appended tasks from deductions
+    await generateAndSaveAppendedTasks(axes, getTodayStr());
 
     setMessage(getMotivationalMessage());
     setStep(hasAppendedStep ? 6 : 5);
@@ -89,10 +120,6 @@ const DailyProgress = () => {
 
   const distractionTiers: DistractionTier[] = ['none', 'less_1h', '2_3h', '4h_plus'];
   const taskStatuses: TaskStatus[] = ['completed', 'minor_lack', 'major_lack', 'not_done'];
-
-  const journey = loadJourney();
-  const userWeights = journey.user?.axisWeights || { mental: 50, physical: 50, religious: 50 };
-  const maxScores = getAllAxisMaxScores(userWeights);
 
   const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void, axisKey: 'mental' | 'physical' | 'religious') => {
     const score = getAxisScore(status, maxScores[axisKey]);
@@ -121,10 +148,10 @@ const DailyProgress = () => {
               <h2 className="font-serif-display text-3xl font-semibold text-foreground mb-2">{totalScore}/40</h2>
               <p className="text-muted-foreground text-lg mb-8 italic max-w-sm mx-auto">"{message}"</p>
 
-              {getDistractionScore(distraction!).istighfarMinutes > 0 && (
+              {distraction && getDistractionScore(distraction).istighfarMinutes > 0 && (
                 <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 mb-6 text-center">
                   <p className="text-accent text-sm font-sans-ui">
-                    📿 مطلوب منك {getDistractionScore(distraction!).istighfarMinutes} دقيقة استغفار غدًا
+                    📿 مطلوب منك {getDistractionScore(distraction).istighfarMinutes} دقيقة استغفار غدًا
                   </p>
                 </div>
               )}
@@ -177,7 +204,7 @@ const DailyProgress = () => {
                   <div>
                     <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {step}/3</p>
                     <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-2 text-center">{AXIS_LABELS[axisKey]}</h2>
-                    <p className="text-accent text-xs text-center mb-4 font-sans-ui">الحد الأقصى: {maxScores[axisKey]} نقطة (صعوبة {userWeights[axisKey]}%)</p>
+                    <p className="text-accent text-xs text-center mb-4 font-sans-ui">الحد الأقصى: {maxScores[axisKey]} نقطة (صعوبة {weights[axisKey]}%)</p>
                     <p className="text-muted-foreground text-sm mb-6 text-center">ما نسبة إتمامك لمهام هذا المحور اليوم؟</p>
                     <div className="space-y-3">
                       {taskStatuses.map(s => renderStatusOption(s, currentStatus, (sel) => { setter(sel); setStep(step + 1); }, axisKey))}
@@ -197,8 +224,8 @@ const DailyProgress = () => {
                       const isFailed = failedTaskIds.includes(task.id);
                       return (
                         <div key={task.id} className="bg-card border border-border rounded-xl p-4">
-                          <p className="text-foreground text-sm mb-1 font-sans-ui">{AXIS_LABELS[task.axisType]}</p>
-                          <p className="text-muted-foreground text-xs mb-3">يمكن استرجاع {task.pointsToReclaim} نقطة ({task.reclaimPercentage}%)</p>
+                          <p className="text-foreground text-sm mb-1 font-sans-ui">{AXIS_LABELS[task.axis_type]}</p>
+                          <p className="text-muted-foreground text-xs mb-3">يمكن استرجاع {task.points_to_reclaim} نقطة ({task.reclaim_percentage}%)</p>
                           <div className="flex gap-2">
                             <button onClick={() => {
                               setCompletedTaskIds(prev => [...prev.filter(id => id !== task.id), task.id]);

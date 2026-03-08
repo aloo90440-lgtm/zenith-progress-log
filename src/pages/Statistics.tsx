@@ -1,51 +1,69 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  loadJourney, getStreak, getAverageDaily, getBestDay, getActiveDays,
-  getWeeklyScore, getWeeklyRating, getHeatmapData, JourneyData
-} from "@/lib/store";
+import { getProfile, getDailyLogs, DbDailyLog } from "@/lib/supabase-store";
+import { getWeeklyRating, getDateOffset, getTodayStr, getAllAxisMaxScores, AXIS_LABELS } from "@/lib/store";
 import { Footprints, TrendingUp, BarChart3, Star, Calendar, Target, Activity, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 const Statistics = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState<JourneyData | null>(null);
+  const [logs, setLogs] = useState<DbDailyLog[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const journey = loadJourney();
-    if (!journey.user) { navigate("/setup"); return; }
-    setData(journey);
+    const load = async () => {
+      const p = await getProfile();
+      if (!p || !p.primary_goal) { navigate("/setup"); return; }
+      const l = await getDailyLogs();
+      setLogs(l);
+      setLoading(false);
+    };
+    load();
   }, [navigate]);
 
-  if (!data) return null;
+  if (loading) return <div className="min-h-screen gradient-desert flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
-  const streak = getStreak(data.logs);
-  const avg = getAverageDaily(data.logs);
-  const best = getBestDay(data.logs);
-  const activeDays = getActiveDays(data.logs);
-  const weeklyScore = getWeeklyScore(data.logs);
+  const today = getTodayStr();
+
+  // Streak
+  let streak = 0;
+  let checkDate = new Date(today);
+  for (let i = 0; i < 365; i++) {
+    const dateStr = checkDate.toISOString().slice(0, 10);
+    const found = logs.find(l => l.date === dateStr && l.total_score > 0);
+    if (found) streak++;
+    else if (i > 0) break;
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  const avg = logs.length > 0 ? Math.round(logs.reduce((s, l) => s + l.total_score, 0) / logs.length) : 0;
+  const best = logs.length > 0 ? logs.reduce((b, l) => l.total_score > b.total_score ? l : b, logs[0]) : null;
+  const activeDays = logs.filter(l => l.total_score > 0).length;
+
+  const weekAgo = getDateOffset(today, -6);
+  const weeklyLogs = logs.filter(l => l.date >= weekAgo && l.date <= today);
+  const weeklyScore = weeklyLogs.reduce((s, l) => s + l.total_score, 0);
   const weeklyRating = getWeeklyRating(weeklyScore);
 
-  const chartData = [...data.logs]
+  const chartData = [...logs]
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-14)
     .map(l => ({
       date: new Date(l.date).toLocaleDateString("ar-SA", { day: "numeric", month: "short" }),
-      mental: l.axes.mental.finalScore,
-      physical: l.axes.physical.finalScore,
-      religious: l.axes.religious.finalScore,
-      distraction: l.distraction.points,
+      mental: l.mental_final_score,
+      physical: l.physical_final_score,
+      religious: l.religious_final_score,
+      distraction: l.distraction_points,
     }));
 
-  const maxDaily = 40;
   const stats = [
     { icon: Footprints, label: "أيام متتالية", value: `${streak}` },
-    { icon: TrendingUp, label: "متوسط يومي", value: `${avg}/${maxDaily}` },
+    { icon: TrendingUp, label: "متوسط يومي", value: `${avg}/40` },
     { icon: Target, label: "نقاط الأسبوع", value: `${weeklyScore}` },
-    { icon: Star, label: "أفضل يوم", value: best ? `${best.totalScore}/${maxDaily}` : "—" },
+    { icon: Star, label: "أفضل يوم", value: best ? `${best.total_score}/40` : "—" },
     { icon: Calendar, label: "أيام نشطة", value: `${activeDays}` },
-    { icon: Activity, label: "إجمالي التقييمات", value: `${data.logs.length}` },
+    { icon: Activity, label: "إجمالي التقييمات", value: `${logs.length}` },
   ];
 
   return (
@@ -57,7 +75,6 @@ const Statistics = () => {
           <p className={`text-sm font-sans-ui mb-8 ${weeklyRating.color}`}>التقييم الأسبوعي: {weeklyRating.label}</p>
         </motion.div>
 
-        {/* Stats grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
           {stats.map((stat, i) => (
             <motion.div key={stat.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }}
@@ -69,7 +86,6 @@ const Statistics = () => {
           ))}
         </div>
 
-        {/* Chart */}
         {chartData.length > 1 && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
             className="bg-card border border-border rounded-xl p-6 shadow-sand">
@@ -79,9 +95,7 @@ const Statistics = () => {
                 <BarChart data={chartData}>
                   <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'hsl(36, 15%, 55%)' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: 'hsl(36, 15%, 55%)' }} axisLine={false} tickLine={false} width={25} />
-                  <Tooltip
-                    contentStyle={{ background: 'hsl(36, 15%, 12%)', border: '1px solid hsl(36, 12%, 20%)', borderRadius: '8px', fontSize: '11px', color: 'hsl(36, 30%, 88%)' }}
-                  />
+                  <Tooltip contentStyle={{ background: 'hsl(36, 15%, 12%)', border: '1px solid hsl(36, 12%, 20%)', borderRadius: '8px', fontSize: '11px', color: 'hsl(36, 30%, 88%)' }} />
                   <Bar dataKey="mental" name="الذهني" fill="hsl(33, 38%, 61%)" radius={[2, 2, 0, 0]} />
                   <Bar dataKey="physical" name="الجسدي" fill="hsl(72, 16%, 38%)" radius={[2, 2, 0, 0]} />
                   <Bar dataKey="religious" name="الديني" fill="hsl(30, 14%, 47%)" radius={[2, 2, 0, 0]} />
@@ -104,7 +118,6 @@ const Statistics = () => {
         )}
       </div>
 
-      {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-6 py-3 z-50">
         <div className="max-w-2xl mx-auto flex justify-around">
           <Link to="/dashboard" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
