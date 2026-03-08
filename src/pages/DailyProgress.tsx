@@ -100,7 +100,7 @@ const DailyProgress = () => {
       <button key={status} onClick={() => onSelect(status)}
         className={`w-full text-right p-4 rounded-xl border transition-all ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
         <div className="flex justify-between items-center">
-          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/{maxScores[axisKey].toFixed(1)}</span>
+          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/{maxScores[axisKey]}</span>
           <span className="text-foreground text-sm font-sans-ui">{STATUS_LABELS[status]}</span>
         </div>
       </button>
@@ -177,7 +177,7 @@ const DailyProgress = () => {
                   <div>
                     <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {step}/3</p>
                     <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-2 text-center">{AXIS_LABELS[axisKey]}</h2>
-                    <p className="text-accent text-xs text-center mb-4 font-sans-ui">الحد الأقصى: {maxScores[axisKey].toFixed(1)} نقطة (صعوبة {userWeights[axisKey]}%)</p>
+                    <p className="text-accent text-xs text-center mb-4 font-sans-ui">الحد الأقصى: {maxScores[axisKey]} نقطة (صعوبة {userWeights[axisKey]}%)</p>
                     <p className="text-muted-foreground text-sm mb-6 text-center">ما نسبة إتمامك لمهام هذا المحور اليوم؟</p>
                     <div className="space-y-3">
                       {taskStatuses.map(s => renderStatusOption(s, currentStatus, (sel) => { setter(sel); setStep(step + 1); }, axisKey))}

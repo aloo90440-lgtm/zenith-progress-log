@@ -90,7 +90,7 @@ export function saveUser(user: UserProfile) {
 export function getAxisMaxScore(weights: { mental: number; physical: number; religious: number }, axis: 'mental' | 'physical' | 'religious'): number {
   const totalWeight = weights.mental + weights.physical + weights.religious;
   if (totalWeight === 0) return 10;
-  return Math.round((weights[axis] / totalWeight) * 30 * 100) / 100;
+  return Math.round((weights[axis] / totalWeight) * 30);
 }
 
 /** Get all three axis max scores */
@@ -104,18 +104,18 @@ export function getAllAxisMaxScores(weights: { mental: number; physical: number;
     religious: (weights.religious / totalWeight) * 30,
   };
   
-  // Round while preserving total of 30
+  // Round to integers while preserving total of 30
   const rounded = {
-    mental: Math.round(raw.mental * 10) / 10,
-    physical: Math.round(raw.physical * 10) / 10,
-    religious: Math.round(raw.religious * 10) / 10,
+    mental: Math.round(raw.mental),
+    physical: Math.round(raw.physical),
+    religious: Math.round(raw.religious),
   };
   
   // Adjust rounding error on the largest
   const diff = 30 - (rounded.mental + rounded.physical + rounded.religious);
-  if (Math.abs(diff) > 0.01) {
+  if (diff !== 0) {
     const largest = Object.entries(rounded).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof rounded;
-    rounded[largest] = Math.round((rounded[largest] + diff) * 10) / 10;
+    rounded[largest] += diff;
   }
   
   return rounded;
@@ -123,8 +123,8 @@ export function getAllAxisMaxScores(weights: { mental: number; physical: number;
 
 export function getAxisScore(status: TaskStatus, maxScore: number = 10): { baseScore: number; deduction: number; finalScore: number } {
   const multiplier = status === 'completed' ? 1 : status === 'minor_lack' ? 0.7 : status === 'major_lack' ? 0.3 : 0;
-  const finalScore = Math.round(maxScore * multiplier * 10) / 10;
-  return { baseScore: maxScore, deduction: Math.round((maxScore - finalScore) * 10) / 10, finalScore };
+  const finalScore = Math.round(maxScore * multiplier);
+  return { baseScore: maxScore, deduction: maxScore - finalScore, finalScore };
 }
 
 export function getDistractionScore(tier: DistractionTier): DistractionEntry {
