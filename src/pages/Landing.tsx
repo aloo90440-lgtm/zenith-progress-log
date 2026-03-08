@@ -59,7 +59,7 @@ const Landing = () => {
           transition={{ delay: 0.9, duration: 0.6 }}
           className="text-muted-foreground text-lg max-w-md mx-auto mb-12 leading-relaxed"
         >
-          يبدأ بناء كيان صلب لا يُكسر... بالمتابعة يومًا بعد يوم
+          هنا يبدأ بناء كيان صلب لا يُكسر... بالمتابعة يومًا بعد يوم
         </motion.p>
 
         <motion.button
