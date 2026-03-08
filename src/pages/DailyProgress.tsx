@@ -395,17 +395,19 @@ const DailyProgress = () => {
                             مثال: 40 صفحة، 10 أسئلة، 30 دقيقة، أو نصف ساعة (0.5 ساعة)
                           </p>
                           {recoveryResult !== null && (
-                            <motion.p
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              className="text-center text-sm font-sans-ui font-bold"
-                              style={{ color: '#8B0000' }}
-                            >
-                              عليك غدًا تعويض {recoveryResult.value} {recoveryResult.unit} من المهمة لاسترجاع النقاط والحفاظ على تقدم التزام قوي
-                            </motion.p>
-                            <p className="text-center text-xs font-sans-ui text-muted-foreground mt-1">
-                              📋 سيتم سؤالك عن هذه المهمة غدًا في قسم <span className="font-bold text-foreground">المهام التعويضية</span>
-                            </p>
+                            <>
+                              <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="text-center text-sm font-sans-ui font-bold"
+                                style={{ color: '#8B0000' }}
+                              >
+                                عليك غدًا تعويض {recoveryResult.value} {recoveryResult.unit} من المهمة لاسترجاع النقاط والحفاظ على تقدم التزام قوي
+                              </motion.p>
+                              <p className="text-center text-xs font-sans-ui text-muted-foreground mt-1">
+                                📋 سيتم سؤالك عن هذه المهمة غدًا في قسم <span className="font-bold text-foreground">المهام التعويضية</span>
+                              </p>
+                            </>
                           )}
                           <div className="flex gap-2">
                             <button
