@@ -115,13 +115,23 @@ const DailyProgress = () => {
   const distractionTiers: DistractionTier[] = ['none', 'less_1h', '2_3h', '4h_plus'];
   const taskStatuses: TaskStatus[] = ['completed', 'minor_lack', 'major_lack', 'not_done'];
 
+  const selectWithDelay = (key: string, action: () => void) => {
+    setPendingSelection(key);
+    setTimeout(() => {
+      action();
+      setPendingSelection(null);
+    }, 350);
+  };
+
   const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void, axisKey: 'mental' | 'physical' | 'religious') => {
     const score = getAxisScore(status, maxScores[axisKey]);
+    const isActive = pendingSelection === `${axisKey}-${status}`;
     return (
-      <button key={status} tabIndex={-1} onClick={() => onSelect(status)}
-        className={`w-full text-right p-4 rounded-xl border transition-all outline-none ring-0 ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
-        <div className="flex items-center justify-center">
-          <span className="text-foreground text-sm font-sans-ui">{STATUS_LABELS[status]}</span>
+      <button key={status} tabIndex={-1} onClick={() => selectWithDelay(`${axisKey}-${status}`, () => onSelect(status))}
+        className={`w-full text-right p-4 rounded-xl border transition-all duration-200 outline-none ring-0 ${isActive ? 'border-primary bg-primary/15 scale-[1.03] shadow-sand' : selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30 active:scale-[0.98]'}`}>
+        <div className="flex items-center justify-center gap-2">
+          {isActive && <span className="text-primary text-lg">✓</span>}
+          <span className={`text-sm font-sans-ui ${isActive ? 'text-primary font-semibold' : 'text-foreground'}`}>{STATUS_LABELS[status]}</span>
         </div>
       </button>
     );
