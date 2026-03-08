@@ -86,13 +86,45 @@ export function saveUser(user: UserProfile) {
 
 // ===== Scoring Logic =====
 
-export function getAxisScore(status: TaskStatus): { baseScore: number; deduction: number; finalScore: number } {
-  switch (status) {
-    case 'completed': return { baseScore: 10, deduction: 0, finalScore: 10 };
-    case 'minor_lack': return { baseScore: 10, deduction: 3, finalScore: 7 };
-    case 'major_lack': return { baseScore: 10, deduction: 7, finalScore: 3 };
-    case 'not_done': return { baseScore: 10, deduction: 10, finalScore: 0 };
+/** Calculate the max points an axis can earn based on its weight proportion of 30 total points */
+export function getAxisMaxScore(weights: { mental: number; physical: number; religious: number }, axis: 'mental' | 'physical' | 'religious'): number {
+  const totalWeight = weights.mental + weights.physical + weights.religious;
+  if (totalWeight === 0) return 10;
+  return Math.round((weights[axis] / totalWeight) * 30 * 100) / 100;
+}
+
+/** Get all three axis max scores */
+export function getAllAxisMaxScores(weights: { mental: number; physical: number; religious: number }): { mental: number; physical: number; religious: number } {
+  const totalWeight = weights.mental + weights.physical + weights.religious;
+  if (totalWeight === 0) return { mental: 10, physical: 10, religious: 10 };
+  
+  const raw = {
+    mental: (weights.mental / totalWeight) * 30,
+    physical: (weights.physical / totalWeight) * 30,
+    religious: (weights.religious / totalWeight) * 30,
+  };
+  
+  // Round while preserving total of 30
+  const rounded = {
+    mental: Math.round(raw.mental * 10) / 10,
+    physical: Math.round(raw.physical * 10) / 10,
+    religious: Math.round(raw.religious * 10) / 10,
+  };
+  
+  // Adjust rounding error on the largest
+  const diff = 30 - (rounded.mental + rounded.physical + rounded.religious);
+  if (Math.abs(diff) > 0.01) {
+    const largest = Object.entries(rounded).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof rounded;
+    rounded[largest] = Math.round((rounded[largest] + diff) * 10) / 10;
   }
+  
+  return rounded;
+}
+
+export function getAxisScore(status: TaskStatus, maxScore: number = 10): { baseScore: number; deduction: number; finalScore: number } {
+  const multiplier = status === 'completed' ? 1 : status === 'minor_lack' ? 0.7 : status === 'major_lack' ? 0.3 : 0;
+  const finalScore = Math.round(maxScore * multiplier * 10) / 10;
+  return { baseScore: maxScore, deduction: Math.round((maxScore - finalScore) * 10) / 10, finalScore };
 }
 
 export function getDistractionScore(tier: DistractionTier): DistractionEntry {
