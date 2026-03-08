@@ -346,23 +346,54 @@ const DailyProgress = () => {
                           <p className="text-foreground text-sm text-center font-sans-ui font-bold">
                             فقط اكتب لي كمية / وقت المهمة وسأقوم بحساب نسبة التعويض منها في اليوم التالي
                           </p>
-                          <Input
-                            type="number"
-                            placeholder="مثال: 40 صفحة / سؤال أو 40 دقيقة"
-                            value={recoveryInput}
-                            onChange={(e) => {
-                              setRecoveryInput(e.target.value);
-                              const val = parseFloat(e.target.value);
-                              if (!isNaN(val) && val > 0) {
-                                const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
-                                setRecoveryResult(Math.round(val * pct * 100) / 100);
-                              } else {
-                                setRecoveryResult(null);
-                              }
-                            }}
-                            className="text-center text-lg"
-                            dir="rtl"
-                          />
+                          <div className="flex gap-2 items-center">
+                            <Input
+                              type="number"
+                              placeholder="الكمية أو الوقت"
+                              value={recoveryInput}
+                              onChange={(e) => {
+                                setRecoveryInput(e.target.value);
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val) && val > 0) {
+                                  const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
+                                  // Convert hours to minutes for calculation
+                                  const effectiveVal = recoveryUnit === 'hours' ? val * 60 : val;
+                                  const result = Math.round(effectiveVal * pct * 100) / 100;
+                                  const unitLabels = { pages: 'صفحة', questions: 'سؤال', minutes: 'دقيقة', hours: 'دقيقة' };
+                                  setRecoveryResult({ value: result, unit: unitLabels[recoveryUnit] });
+                                } else {
+                                  setRecoveryResult(null);
+                                }
+                              }}
+                              className="text-center text-lg flex-1"
+                              dir="rtl"
+                            />
+                            <select
+                              value={recoveryUnit}
+                              onChange={(e) => {
+                                const newUnit = e.target.value as typeof recoveryUnit;
+                                setRecoveryUnit(newUnit);
+                                const val = parseFloat(recoveryInput);
+                                if (!isNaN(val) && val > 0) {
+                                  const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
+                                  const effectiveVal = newUnit === 'hours' ? val * 60 : val;
+                                  const result = Math.round(effectiveVal * pct * 100) / 100;
+                                  const unitLabels = { pages: 'صفحة', questions: 'سؤال', minutes: 'دقيقة', hours: 'دقيقة' };
+                                  setRecoveryResult({ value: result, unit: unitLabels[newUnit] });
+                                }
+                              }}
+                              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm font-sans-ui"
+                              dir="rtl"
+                            >
+                              <option value="minutes">دقيقة</option>
+                              <option value="hours">ساعة</option>
+                              <option value="pages">صفحة</option>
+                              <option value="questions">سؤال</option>
+                            </select>
+                          </div>
+                          <p className="text-muted-foreground text-xs text-center font-sans-ui">
+                            مثال: 40 صفحة، 10 أسئلة، 30 دقيقة، أو نصف ساعة (0.5 ساعة)
+                          </p>
                           {recoveryResult !== null && (
                             <motion.p
                               initial={{ opacity: 0 }}
@@ -370,7 +401,7 @@ const DailyProgress = () => {
                               className="text-center text-sm font-sans-ui font-bold"
                               style={{ color: '#8B0000' }}
                             >
-                              عليك غدًا تعويض {recoveryResult} من المهمة لاسترجاع النقاط والحفاظ على تقدم التزام قوي
+                              عليك غدًا تعويض {recoveryResult.value} {recoveryResult.unit} من المهمة لاسترجاع النقاط والحفاظ على تقدم التزام قوي
                             </motion.p>
                           )}
                           <div className="flex gap-2">
