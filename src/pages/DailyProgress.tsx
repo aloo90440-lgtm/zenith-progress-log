@@ -56,8 +56,17 @@ const DailyProgress = () => {
 
   const weights = profile.axis_weights;
   const maxScores = getAllAxisMaxScores(weights);
+  const hasDistractionTypeStep = distraction !== null && distraction !== 'none';
   const hasAppendedStep = pendingTasks.length > 0;
-  const totalSteps = hasAppendedStep ? 7 : 6;
+  // Steps: 0=distraction, 1=type(conditional), 2=mental, 3=physical, 4=religious, 5=appended(conditional), 6=note, 7=done
+  const typeStepOffset = hasDistractionTypeStep ? 0 : -1;
+  const mentalStep = 2 + typeStepOffset;
+  const physicalStep = 3 + typeStepOffset;
+  const religiousStep = 4 + typeStepOffset;
+  const appendedStep = 5 + typeStepOffset;
+  const noteStep = hasAppendedStep ? 6 + typeStepOffset : 5 + typeStepOffset;
+  const doneStep = noteStep + 1;
+  const totalSteps = doneStep;
 
   const handleSubmit = async () => {
     if (!distraction || !mentalStatus || !physicalStatus || !religiousStatus) return;
