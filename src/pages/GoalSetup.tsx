@@ -39,6 +39,19 @@ const GoalSetup = () => {
       }
       return true;
     }
+    if (step === 2) {
+      const weights = [mentalWeight, physicalWeight, religiousWeight];
+      const count100 = weights.filter(w => w === 100).length;
+      if (count100 === 0) {
+        setError("يجب اختيار محور واحد بصعوبة 100%");
+        return false;
+      }
+      if (count100 > 1) {
+        setError("محور واحد فقط يمكن أن يكون 100%");
+        return false;
+      }
+      return true;
+    }
     return true;
   };
 
