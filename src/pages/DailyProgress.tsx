@@ -17,6 +17,7 @@ import { Footprints, TrendingUp, BarChart3, FileText, CheckCircle2, XCircle } fr
 const DailyProgress = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null);
   const [distraction, setDistraction] = useState<DistractionTier | null>(null);
   const [mentalStatus, setMentalStatus] = useState<TaskStatus | null>(null);
   const [physicalStatus, setPhysicalStatus] = useState<TaskStatus | null>(null);
