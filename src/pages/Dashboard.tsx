@@ -17,6 +17,10 @@ const Dashboard = () => {
   useEffect(() => {
     Promise.all([getProfile(), getDailyLogs()]).then(([p, l]) => {
       if (!p || !p.primary_goal) { navigate("/setup"); return; }
+      // إذا لم يتم تسجيل تقييم اليوم، توجيه لصفحة التقييم اليومي أولاً
+      const today = new Date().toISOString().slice(0, 10);
+      const todayLog = l.find(log => log.date === today && log.total_score > 0);
+      if (!todayLog) { navigate("/progress", { replace: true }); return; }
       setProfile(p);
       setLogs(l);
       setLoading(false);

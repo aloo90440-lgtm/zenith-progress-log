@@ -98,7 +98,7 @@ const GoalSetup = () => {
         religious: religiousWeight,
       },
     });
-    navigate("/dashboard");
+    navigate("/progress");
   };
 
   const steps = [
