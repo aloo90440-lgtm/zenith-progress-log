@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   getAxisScore, getDistractionScore, calculateDailyTotal,
   getAllAxisMaxScores, getMotivationalMessage, getTodayStr,
-  TaskStatus, DistractionTier,
-  AXIS_LABELS, STATUS_LABELS, DISTRACTION_LABELS,
+  TaskStatus, DistractionTier, DistractionType,
+  AXIS_LABELS, STATUS_LABELS, DISTRACTION_LABELS, DISTRACTION_TYPE_LABELS,
 } from "@/lib/store";
 import {
   getProfile, getTodayLog, saveDailyLogDb, getPendingAppendedTasksDb,
@@ -19,6 +19,7 @@ const DailyProgress = () => {
   const [step, setStep] = useState(0);
   const [pendingSelection, setPendingSelection] = useState<string | null>(null);
   const [distraction, setDistraction] = useState<DistractionTier | null>(null);
+  const [distractionType, setDistractionType] = useState<DistractionType | null>(null);
   const [mentalStatus, setMentalStatus] = useState<TaskStatus | null>(null);
   const [physicalStatus, setPhysicalStatus] = useState<TaskStatus | null>(null);
   const [religiousStatus, setReligiousStatus] = useState<TaskStatus | null>(null);
@@ -55,8 +56,17 @@ const DailyProgress = () => {
 
   const weights = profile.axis_weights;
   const maxScores = getAllAxisMaxScores(weights);
+  const hasDistractionTypeStep = distraction !== null && distraction !== 'none';
   const hasAppendedStep = pendingTasks.length > 0;
-  const totalSteps = hasAppendedStep ? 7 : 6;
+  // Steps: 0=distraction, 1=type(conditional), 2=mental, 3=physical, 4=religious, 5=appended(conditional), 6=note, 7=done
+  const typeStepOffset = hasDistractionTypeStep ? 0 : -1;
+  const mentalStep = 2 + typeStepOffset;
+  const physicalStep = 3 + typeStepOffset;
+  const religiousStep = 4 + typeStepOffset;
+  const appendedStep = 5 + typeStepOffset;
+  const noteStep = hasAppendedStep ? 6 + typeStepOffset : 5 + typeStepOffset;
+  const doneStep = noteStep + 1;
+  const totalSteps = doneStep;
 
   const handleSubmit = async () => {
     if (!distraction || !mentalStatus || !physicalStatus || !religiousStatus) return;
@@ -85,6 +95,7 @@ const DailyProgress = () => {
     await saveDailyLogDb({
       date: getTodayStr(),
       distraction_tier: distraction,
+      distraction_type: distractionType || '',
       distraction_points: distractionEntry.points,
       distraction_istighfar: distractionEntry.istighfarMinutes,
       mental_status: mentalStatus,
@@ -113,7 +124,7 @@ const DailyProgress = () => {
     await generateAndSaveAppendedTasks(axes, getTodayStr());
 
     setMessage(getMotivationalMessage());
-    setStep(hasAppendedStep ? 6 : 5);
+    setStep(doneStep);
   };
 
   const distractionTiers: DistractionTier[] = ['none', 'less_1h', '2_3h', '4h_plus'];
@@ -141,7 +152,8 @@ const DailyProgress = () => {
     );
   };
 
-  const isDone = step === (hasAppendedStep ? 6 : 5);
+  const distractionTypes: DistractionType[] = ['social', 'movies', 'music', 'other'];
+  const isDone = step === doneStep;
 
   return (
     <div className="min-h-screen gradient-desert flex items-center justify-center px-4 sm:px-6 py-12 pb-28" dir="rtl">
@@ -233,7 +245,15 @@ const DailyProgress = () => {
                      {distractionTiers.map(tier => {
                         const isActive = pendingSelection === `dist-${tier}`;
                         return (
-                          <button key={tier} tabIndex={-1} onClick={() => selectWithDelay(`dist-${tier}`, () => { setDistraction(tier); setStep(1); })}
+                          <button key={tier} tabIndex={-1} onClick={() => selectWithDelay(`dist-${tier}`, () => { 
+                            setDistraction(tier); 
+                            if (tier === 'none') {
+                              setDistractionType(null);
+                              setStep(mentalStep);
+                            } else {
+                              setStep(1);
+                            }
+                          })}
                             className={`w-full text-right p-4 rounded-xl border transition-all duration-200 outline-none ring-0 ${isActive ? 'border-primary bg-primary/15 scale-[1.03] shadow-sand' : distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30 active:scale-[0.98]'}`}>
                             <div className="flex items-center justify-center gap-2">
                               {isActive && <span className="text-primary text-lg">✓</span>}
@@ -246,14 +266,36 @@ const DailyProgress = () => {
                 </div>
               )}
 
-              {/* Steps 1-3: Axes */}
-              {[1, 2, 3].includes(step) && (() => {
-                const axisKey = (step === 1 ? 'mental' : step === 2 ? 'physical' : 'religious') as 'mental' | 'physical' | 'religious';
-                const currentStatus = step === 1 ? mentalStatus : step === 2 ? physicalStatus : religiousStatus;
-                const setter = step === 1 ? setMentalStatus : step === 2 ? setPhysicalStatus : setReligiousStatus;
+              {/* Step 1: Distraction Type (only if distraction !== none) */}
+              {step === 1 && hasDistractionTypeStep && (
+                <div>
+                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">ما نوع المشتت؟</h2>
+                   <div className="space-y-3">
+                     {distractionTypes.map(type => {
+                        const isActive = pendingSelection === `dtype-${type}`;
+                        return (
+                          <button key={type} tabIndex={-1} onClick={() => selectWithDelay(`dtype-${type}`, () => { setDistractionType(type); setStep(mentalStep); })}
+                            className={`w-full text-right p-4 rounded-xl border transition-all duration-200 outline-none ring-0 ${isActive ? 'border-primary bg-primary/15 scale-[1.03] shadow-sand' : distractionType === type ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30 active:scale-[0.98]'}`}>
+                            <div className="flex items-center justify-center gap-2">
+                              {isActive && <span className="text-primary text-lg">✓</span>}
+                              <span className={`text-sm font-sans-ui ${isActive ? 'text-primary font-semibold' : 'text-foreground'}`}>{DISTRACTION_TYPE_LABELS[type]}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* Axes steps */}
+              {[mentalStep, physicalStep, religiousStep].includes(step) && (() => {
+                const axisIndex = step === mentalStep ? 0 : step === physicalStep ? 1 : 2;
+                const axisKey = (['mental', 'physical', 'religious'] as const)[axisIndex];
+                const currentStatus = axisIndex === 0 ? mentalStatus : axisIndex === 1 ? physicalStatus : religiousStatus;
+                const setter = axisIndex === 0 ? setMentalStatus : axisIndex === 1 ? setPhysicalStatus : setReligiousStatus;
                 return (
                   <div>
-                    <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {step}/3</p>
+                    <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {axisIndex + 1}/3</p>
                     <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-2 text-center">{AXIS_LABELS[axisKey]}</h2>
                     
                     <p className="text-muted-foreground text-sm mb-6 text-center">ما نسبة إتمامك لمهام هذا المحور اليوم؟</p>
@@ -264,8 +306,8 @@ const DailyProgress = () => {
                 );
               })()}
 
-              {/* Step 4: Appended Tasks (conditional) */}
-              {step === 4 && hasAppendedStep && (
+              {/* Appended Tasks step */}
+              {step === appendedStep && hasAppendedStep && (
                 <div>
                   <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المهام التعويضية</p>
                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">مهام مُلحقة من أيام سابقة</h2>
@@ -297,7 +339,7 @@ const DailyProgress = () => {
                       );
                     })}
                   </div>
-                  <button onClick={() => setStep(5)}
+                  <button onClick={() => setStep(noteStep)}
                     disabled={pendingTasks.some(t => !completedTaskIds.includes(t.id) && !failedTaskIds.includes(t.id))}
                     className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-3.5 rounded-lg hover:opacity-90 transition-opacity shadow-sand disabled:opacity-50">
                     التالي
@@ -306,7 +348,7 @@ const DailyProgress = () => {
               )}
 
               {/* Note step */}
-              {step === (hasAppendedStep ? 5 : 4) && (
+              {step === noteStep && (
                 <div>
                   <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">تأمل</p>
                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">ما أهم شيء تعلمته اليوم؟</h2>
@@ -325,7 +367,15 @@ const DailyProgress = () => {
 
               {/* Back button */}
               {step > 0 && !isDone && (
-                <button onClick={() => setStep(step - 1)}
+                <button onClick={() => {
+                  if (step === mentalStep && !hasDistractionTypeStep) {
+                    setStep(0);
+                  } else if (step === noteStep && !hasAppendedStep) {
+                    setStep(religiousStep);
+                  } else {
+                    setStep(step - 1);
+                  }
+                }}
                   className="w-full mt-3 text-muted-foreground text-sm font-sans-ui py-2 hover:text-foreground transition-colors">
                   رجوع
                 </button>

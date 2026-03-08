@@ -2,6 +2,14 @@
 
 export type TaskStatus = 'completed' | 'minor_lack' | 'major_lack' | 'not_done';
 export type DistractionTier = 'none' | 'less_1h' | '2_3h' | '4h_plus';
+export type DistractionType = 'social' | 'movies' | 'music' | 'other';
+
+export const DISTRACTION_TYPE_LABELS: Record<DistractionType, string> = {
+  social: 'سوشيال ميديا',
+  movies: 'أفلام ومسلسلات',
+  music: 'موسيقى',
+  other: 'أخرى',
+};
 
 export interface UserProfile {
   name: string;

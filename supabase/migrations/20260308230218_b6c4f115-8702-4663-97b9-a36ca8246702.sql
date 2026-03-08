@@ -1,0 +1,1 @@
+ALTER TABLE public.daily_logs ADD COLUMN distraction_type text NOT NULL DEFAULT '';
