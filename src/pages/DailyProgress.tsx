@@ -100,7 +100,7 @@ const DailyProgress = () => {
       <button key={status} onClick={() => onSelect(status)}
         className={`w-full text-right p-4 rounded-xl border transition-all ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
         <div className="flex justify-between items-center">
-          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/{maxScores[axisKey].toFixed(1)}</span>
+          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/{maxScores[axisKey]}</span>
           <span className="text-foreground text-sm font-sans-ui">{STATUS_LABELS[status]}</span>
         </div>
       </button>
