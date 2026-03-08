@@ -38,11 +38,12 @@ const Statistics = () => {
       distraction: l.distraction.points,
     }));
 
+  const maxDaily = 40;
   const stats = [
     { icon: Footprints, label: "أيام متتالية", value: `${streak}` },
-    { icon: TrendingUp, label: "متوسط يومي", value: `${avg}/40` },
-    { icon: Target, label: "نقاط الأسبوع", value: `${weeklyScore}/200` },
-    { icon: Star, label: "أفضل يوم", value: best ? `${best.totalScore}/40` : "—" },
+    { icon: TrendingUp, label: "متوسط يومي", value: `${avg}/${maxDaily}` },
+    { icon: Target, label: "نقاط الأسبوع", value: `${weeklyScore}` },
+    { icon: Star, label: "أفضل يوم", value: best ? `${best.totalScore}/${maxDaily}` : "—" },
     { icon: Calendar, label: "أيام نشطة", value: `${activeDays}` },
     { icon: Activity, label: "إجمالي التقييمات", value: `${data.logs.length}` },
   ];
