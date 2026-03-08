@@ -90,13 +90,17 @@ const DailyProgress = () => {
   const distractionTiers: DistractionTier[] = ['none', 'less_1h', '2_3h', '4h_plus'];
   const taskStatuses: TaskStatus[] = ['completed', 'minor_lack', 'major_lack', 'not_done'];
 
-  const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void) => {
-    const score = getAxisScore(status);
+  const journey = loadJourney();
+  const userWeights = journey.user?.axisWeights || { mental: 50, physical: 50, religious: 50 };
+  const maxScores = getAllAxisMaxScores(userWeights);
+
+  const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void, axisKey: 'mental' | 'physical' | 'religious') => {
+    const score = getAxisScore(status, maxScores[axisKey]);
     return (
       <button key={status} onClick={() => onSelect(status)}
         className={`w-full text-right p-4 rounded-xl border transition-all ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
         <div className="flex justify-between items-center">
-          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/10</span>
+          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/{maxScores[axisKey].toFixed(1)}</span>
           <span className="text-foreground text-sm font-sans-ui">{STATUS_LABELS[status]}</span>
         </div>
       </button>
