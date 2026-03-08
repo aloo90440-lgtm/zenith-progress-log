@@ -1,129 +1,269 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { saveDailyEntry, getTodayStr, loadJourney, getMotivationalMessage } from "@/lib/store";
-import { Slider } from "@/components/ui/slider";
-import { Footprints, TrendingUp, BarChart3 } from "lucide-react";
+import {
+  loadJourney, saveDailyLog, getTodayStr, getMotivationalMessage,
+  getAxisScore, getDistractionScore, checkConsecutiveDistraction,
+  calculateDailyTotal, getPendingAppendedTasks,
+  TaskStatus, DistractionTier, AxisEntry, AppendedTask,
+  AXIS_LABELS, STATUS_LABELS, DISTRACTION_LABELS,
+} from "@/lib/store";
+import { Footprints, TrendingUp, BarChart3, FileText, CheckCircle2, XCircle } from "lucide-react";
 
 const DailyProgress = () => {
   const navigate = useNavigate();
-  const [progress, setProgress] = useState(50);
-  const [submitted, setSubmitted] = useState(false);
+  const [step, setStep] = useState(0); // 0=distraction, 1=mental, 2=physical, 3=religious, 4=appended, 5=note, 6=done
+  const [distraction, setDistraction] = useState<DistractionTier | null>(null);
+  const [mentalStatus, setMentalStatus] = useState<TaskStatus | null>(null);
+  const [physicalStatus, setPhysicalStatus] = useState<TaskStatus | null>(null);
+  const [religiousStatus, setReligiousStatus] = useState<TaskStatus | null>(null);
+  const [dailyNote, setDailyNote] = useState("");
   const [message, setMessage] = useState("");
+  const [pendingTasks, setPendingTasks] = useState<AppendedTask[]>([]);
+  const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
+  const [failedTaskIds, setFailedTaskIds] = useState<string[]>([]);
+  const [totalScore, setTotalScore] = useState(0);
 
   useEffect(() => {
     const journey = loadJourney();
-    if (!journey.goal) {
-      navigate("/setup");
-      return;
+    if (!journey.user) { navigate("/setup"); return; }
+    const pending = getPendingAppendedTasks(journey, getTodayStr());
+    setPendingTasks(pending);
+
+    // Load existing today entry
+    const today = journey.logs.find(l => l.date === getTodayStr());
+    if (today) {
+      setDistraction(today.distraction.tier);
+      setMentalStatus(today.axes.mental.finalScore === 10 ? 'completed' : today.axes.mental.finalScore === 7 ? 'minor_lack' : today.axes.mental.finalScore === 3 ? 'major_lack' : 'not_done');
+      setPhysicalStatus(today.axes.physical.finalScore === 10 ? 'completed' : today.axes.physical.finalScore === 7 ? 'minor_lack' : today.axes.physical.finalScore === 3 ? 'major_lack' : 'not_done');
+      setReligiousStatus(today.axes.religious.finalScore === 10 ? 'completed' : today.axes.religious.finalScore === 7 ? 'minor_lack' : today.axes.religious.finalScore === 3 ? 'major_lack' : 'not_done');
+      setDailyNote(today.dailyNote);
     }
-    const today = journey.entries.find(e => e.date === getTodayStr());
-    if (today) setProgress(today.progress);
   }, [navigate]);
 
-  const handleSubmit = () => {
-    saveDailyEntry({
-      date: getTodayStr(),
-      progress,
-      createdAt: new Date().toISOString(),
-    });
-    setMessage(getMotivationalMessage());
-    setSubmitted(true);
+  const hasAppendedStep = pendingTasks.length > 0;
+  const totalSteps = hasAppendedStep ? 7 : 6; // distraction, 3 axes, [appended], note, done
+
+  const getStepIndex = (logicalStep: number) => {
+    if (!hasAppendedStep && logicalStep >= 4) return logicalStep + 1;
+    return logicalStep;
   };
 
+  const handleSubmit = () => {
+    if (!distraction || !mentalStatus || !physicalStatus || !religiousStatus) return;
+
+    const data = loadJourney();
+    const distractionEntry = getDistractionScore(distraction);
+    const axes = {
+      mental: { ...getAxisScore(mentalStatus), status: mentalStatus } as AxisEntry,
+      physical: { ...getAxisScore(physicalStatus), status: physicalStatus } as AxisEntry,
+      religious: { ...getAxisScore(religiousStatus), status: religiousStatus } as AxisEntry,
+    };
+
+    const consecutive = checkConsecutiveDistraction(data.logs, getTodayStr());
+    const recoveredPoints = completedTaskIds.reduce((sum, id) => {
+      const t = pendingTasks.find(t => t.id === id);
+      return sum + (t?.pointsToReclaim || 0);
+    }, 0);
+
+    const total = calculateDailyTotal(axes, distractionEntry, consecutive, recoveredPoints);
+    setTotalScore(total);
+
+    saveDailyLog({
+      date: getTodayStr(),
+      distraction: distractionEntry,
+      axes,
+      appendedTasksCompleted: completedTaskIds,
+      appendedTasksFailed: failedTaskIds,
+      dailyNote: dailyNote.trim(),
+      totalScore: total,
+      consecutiveDistraction: consecutive,
+      createdAt: new Date().toISOString(),
+    });
+
+    setMessage(getMotivationalMessage());
+    setStep(hasAppendedStep ? 6 : 5);
+  };
+
+  const distractionTiers: DistractionTier[] = ['none', 'less_1h', '2_3h', '4h_plus'];
+  const taskStatuses: TaskStatus[] = ['completed', 'minor_lack', 'major_lack', 'not_done'];
+
+  const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void) => {
+    const score = getAxisScore(status);
+    return (
+      <button key={status} onClick={() => onSelect(status)}
+        className={`w-full text-right p-4 rounded-xl border transition-all ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
+        <div className="flex justify-between items-center">
+          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/10</span>
+          <span className="text-foreground text-sm font-sans-ui">{STATUS_LABELS[status]}</span>
+        </div>
+      </button>
+    );
+  };
+
+  const isDone = step === (hasAppendedStep ? 6 : 5);
+
   return (
-    <div className="min-h-screen gradient-desert flex items-center justify-center px-6 py-12 pb-24">
+    <div className="min-h-screen gradient-desert flex items-center justify-center px-6 py-12 pb-24" dir="rtl">
       <div className="w-full max-w-lg">
         <AnimatePresence mode="wait">
-          {!submitted ? (
-            <motion.div
-              key="form"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5 }}
-              className="text-center"
-            >
-              <p className="text-dust text-sm tracking-[0.3em] uppercase mb-3 font-sans-ui">
-                Daily Check-in
-              </p>
-              <h1 className="font-serif-display text-2xl sm:text-3xl font-semibold text-foreground mb-2">
-                How much progress today?
-              </h1>
-              <div className="w-12 h-px bg-primary/40 mx-auto mb-10" />
-
-              <div className="bg-card border border-border rounded-xl p-8 shadow-sand mb-8">
-                <p className="text-7xl sm:text-8xl font-serif-display font-bold text-foreground mb-6">
-                  {progress}%
-                </p>
-
-                <Slider
-                  value={[progress]}
-                  onValueChange={(v) => setProgress(v[0])}
-                  max={100}
-                  step={5}
-                  className="w-full"
-                />
-
-                <div className="flex justify-between mt-3 text-xs text-muted-foreground font-sans-ui">
-                  <span>0%</span>
-                  <span>50%</span>
-                  <span>100%</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleSubmit}
-                className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-4 rounded-xl text-base tracking-wide hover:opacity-90 transition-opacity shadow-sand"
-              >
-                Save Progress
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="feedback"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6 }}
-              className="text-center"
-            >
+          {isDone ? (
+            <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
                 <Footprints className="w-8 h-8 text-primary" />
               </div>
+              <h2 className="font-serif-display text-3xl font-semibold text-foreground mb-2">{totalScore}/40</h2>
+              <p className="text-muted-foreground text-lg mb-8 italic max-w-sm mx-auto">"{message}"</p>
 
-              <h2 className="font-serif-display text-2xl sm:text-3xl font-semibold text-foreground mb-4">
-                {progress}% recorded
-              </h2>
+              {getDistractionScore(distraction!).istighfarMinutes > 0 && (
+                <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 mb-6 text-center">
+                  <p className="text-accent text-sm font-sans-ui">
+                    📿 مطلوب منك {getDistractionScore(distraction!).istighfarMinutes} دقيقة استغفار غدًا
+                  </p>
+                </div>
+              )}
 
-              <p className="text-muted-foreground text-lg mb-10 italic max-w-sm mx-auto leading-relaxed">
-                "{message}"
-              </p>
-
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="gradient-sand text-primary-foreground font-sans-ui font-medium px-10 py-3.5 rounded-lg text-base tracking-wide hover:opacity-90 transition-opacity shadow-sand"
-              >
-                Back to Journey
+              <button onClick={() => navigate("/dashboard")}
+                className="gradient-sand text-primary-foreground font-sans-ui font-medium px-10 py-3.5 rounded-lg hover:opacity-90 transition-opacity shadow-sand">
+                العودة للرحلة
               </button>
+            </motion.div>
+          ) : (
+            <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
+              {/* Progress bar */}
+              <div className="flex justify-center gap-1.5 mb-8">
+                {Array.from({ length: totalSteps - 1 }).map((_, i) => (
+                  <div key={i} className={`h-1 flex-1 rounded-full max-w-8 transition-colors ${i <= step ? 'bg-primary' : 'bg-border'}`} />
+                ))}
+              </div>
+
+              {/* Step 0: Distractions */}
+              {step === 0 && (
+                <div>
+                  <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">الأولوية</p>
+                  <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">هل تعرضت لمشتتات اليوم؟</h2>
+                  <div className="space-y-3">
+                    {distractionTiers.map(tier => {
+                      const info = getDistractionScore(tier);
+                      return (
+                        <button key={tier} onClick={() => { setDistraction(tier); setStep(1); }}
+                          className={`w-full text-right p-4 rounded-xl border transition-all ${distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
+                          <div className="flex justify-between items-center">
+                            <div className="text-left">
+                              <span className="text-primary font-serif-display font-semibold">{info.points}/10</span>
+                              {info.istighfarMinutes > 0 && <p className="text-accent text-[10px]">+ {info.istighfarMinutes} دقيقة استغفار</p>}
+                            </div>
+                            <span className="text-foreground text-sm font-sans-ui">{DISTRACTION_LABELS[tier]}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Steps 1-3: Axes */}
+              {[1, 2, 3].includes(step) && (() => {
+                const axisKey = step === 1 ? 'mental' : step === 2 ? 'physical' : 'religious';
+                const currentStatus = step === 1 ? mentalStatus : step === 2 ? physicalStatus : religiousStatus;
+                const setter = step === 1 ? setMentalStatus : step === 2 ? setPhysicalStatus : setReligiousStatus;
+                return (
+                  <div>
+                    <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {step}/3</p>
+                    <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">{AXIS_LABELS[axisKey]}</h2>
+                    <p className="text-muted-foreground text-sm mb-6 text-center">ما نسبة إتمامك لمهام هذا المحور اليوم؟</p>
+                    <div className="space-y-3">
+                      {taskStatuses.map(s => renderStatusOption(s, currentStatus, (sel) => { setter(sel); setStep(step + 1); }))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Step 4: Appended Tasks (conditional) */}
+              {step === 4 && hasAppendedStep && (
+                <div>
+                  <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المهام التعويضية</p>
+                  <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">مهام مُلحقة من أيام سابقة</h2>
+                  <div className="space-y-3 mb-6">
+                    {pendingTasks.map(task => {
+                      const isCompleted = completedTaskIds.includes(task.id);
+                      const isFailed = failedTaskIds.includes(task.id);
+                      return (
+                        <div key={task.id} className="bg-card border border-border rounded-xl p-4">
+                          <p className="text-foreground text-sm mb-1 font-sans-ui">{AXIS_LABELS[task.axisType]}</p>
+                          <p className="text-muted-foreground text-xs mb-3">يمكن استرجاع {task.pointsToReclaim} نقطة ({task.reclaimPercentage}%)</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => {
+                              setCompletedTaskIds(prev => [...prev.filter(id => id !== task.id), task.id]);
+                              setFailedTaskIds(prev => prev.filter(id => id !== task.id));
+                            }}
+                              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-sans-ui transition-all ${isCompleted ? 'bg-accent/20 border border-accent text-accent' : 'border border-border text-muted-foreground hover:border-accent/30'}`}>
+                              <CheckCircle2 className="w-4 h-4" /> أنجزت
+                            </button>
+                            <button onClick={() => {
+                              setFailedTaskIds(prev => [...prev.filter(id => id !== task.id), task.id]);
+                              setCompletedTaskIds(prev => prev.filter(id => id !== task.id));
+                            }}
+                              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-sans-ui transition-all ${isFailed ? 'bg-destructive/20 border border-destructive text-destructive' : 'border border-border text-muted-foreground hover:border-destructive/30'}`}>
+                              <XCircle className="w-4 h-4" /> لم أنجز
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <button onClick={() => setStep(5)}
+                    disabled={pendingTasks.some(t => !completedTaskIds.includes(t.id) && !failedTaskIds.includes(t.id))}
+                    className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-3.5 rounded-lg hover:opacity-90 transition-opacity shadow-sand disabled:opacity-50">
+                    التالي
+                  </button>
+                </div>
+              )}
+
+              {/* Note step */}
+              {step === (hasAppendedStep ? 5 : 4) && (
+                <div>
+                  <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">تأمل</p>
+                  <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">ما أهم شيء تعلمته اليوم؟</h2>
+                  <textarea
+                    value={dailyNote}
+                    onChange={(e) => setDailyNote(e.target.value)}
+                    placeholder="اكتب ملاحظتك هنا..."
+                    className="w-full bg-card border border-border rounded-xl p-4 text-foreground placeholder:text-muted-foreground/50 min-h-[120px] resize-none font-sans-ui text-sm focus:outline-none focus:border-primary/50"
+                  />
+                  <button onClick={handleSubmit}
+                    className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-3.5 rounded-lg mt-6 hover:opacity-90 transition-opacity shadow-sand">
+                    حفظ التقييم
+                  </button>
+                </div>
+              )}
+
+              {/* Back button */}
+              {step > 0 && !isDone && (
+                <button onClick={() => setStep(step - 1)}
+                  className="w-full mt-3 text-muted-foreground text-sm font-sans-ui py-2 hover:text-foreground transition-colors">
+                  رجوع
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-6 py-3">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-6 py-3 z-50">
         <div className="max-w-2xl mx-auto flex justify-around">
           <Link to="/dashboard" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-            <Footprints className="w-5 h-5" />
-            <span className="text-[10px] font-sans-ui">Journey</span>
+            <Footprints className="w-5 h-5" /><span className="text-[10px] font-sans-ui">الرحلة</span>
           </Link>
           <Link to="/progress" className="flex flex-col items-center gap-1 text-primary">
-            <TrendingUp className="w-5 h-5" />
-            <span className="text-[10px] font-sans-ui">Progress</span>
+            <TrendingUp className="w-5 h-5" /><span className="text-[10px] font-sans-ui">التقييم</span>
           </Link>
           <Link to="/statistics" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-            <BarChart3 className="w-5 h-5" />
-            <span className="text-[10px] font-sans-ui">Stats</span>
+            <BarChart3 className="w-5 h-5" /><span className="text-[10px] font-sans-ui">الإحصائيات</span>
+          </Link>
+          <Link to="/weekly" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+            <FileText className="w-5 h-5" /><span className="text-[10px] font-sans-ui">التقرير</span>
           </Link>
         </div>
       </nav>
