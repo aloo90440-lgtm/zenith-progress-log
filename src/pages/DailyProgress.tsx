@@ -174,7 +174,7 @@ const DailyProgress = () => {
               {step === 0 && (
                 <div>
                   <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">الأولوية</p>
-                  <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">هل تعرضت لمشتتات اليوم؟</h2>
+                  <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">هل عرضت نفسك لمشتتات اليوم؟</h2>
                   <div className="space-y-3">
                     {distractionTiers.map(tier => {
                       const info = getDistractionScore(tier);
