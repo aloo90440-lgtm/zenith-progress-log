@@ -336,7 +336,7 @@ const DailyProgress = () => {
                           <div className="flex items-center justify-center gap-2 text-destructive">
                             <AlertTriangle className="w-5 h-5" />
                             <p className="text-sm font-sans-ui font-semibold">
-                              لقد خسرت {recoveryModal.pointsLost} نقطة بسبب {STATUS_LABELS[recoveryModal.status]}
+                              لقد خسرت {recoveryModal.pointsLost} نقاط بسبب {recoveryModal.status === 'minor_lack' ? 'نقص بسيط' : 'نقص كبير'} في المهام
                             </p>
                           </div>
                           <p className="text-muted-foreground text-sm text-center font-sans-ui">
@@ -347,7 +347,7 @@ const DailyProgress = () => {
                           </p>
                           <Input
                             type="number"
-                            placeholder="مثال: 30 (دقيقة أو عدد)"
+                            placeholder="مثال: 40 صفحة / سؤال أو 40 دقيقة"
                             value={recoveryInput}
                             onChange={(e) => {
                               setRecoveryInput(e.target.value);
@@ -372,15 +372,28 @@ const DailyProgress = () => {
                               عليك غدًا تعويض {recoveryResult} من المهمة لاسترجاع النقاط والحفاظ على تقدم التزام قوي
                             </motion.p>
                           )}
-                          <button
-                            onClick={() => {
-                              setRecoveryModal(null);
-                              setStep(step + 1);
-                            }}
-                            className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-3 rounded-lg hover:opacity-90 transition-opacity"
-                          >
-                            متابعة
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setRecoveryModal(null);
+                                setStep(step + 1);
+                              }}
+                              className="flex-1 gradient-sand text-primary-foreground font-sans-ui font-medium py-3 rounded-lg hover:opacity-90 transition-opacity"
+                            >
+                              متابعة للتعويض
+                            </button>
+                            <button
+                              onClick={() => {
+                                setRecoveryModal(null);
+                                setRecoveryInput("");
+                                setRecoveryResult(null);
+                                setStep(step + 1);
+                              }}
+                              className="flex-1 border border-destructive text-destructive font-sans-ui font-medium py-3 rounded-lg hover:bg-destructive/10 transition-colors"
+                            >
+                              عدم التعويض
+                            </button>
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
