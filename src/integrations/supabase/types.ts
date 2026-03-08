@@ -14,7 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      appended_tasks: {
+        Row: {
+          axis_type: string
+          completed: boolean
+          created_at: string
+          created_date: string
+          expiry_date: string
+          id: string
+          points_to_reclaim: number
+          reclaim_percentage: number
+          user_id: string
+        }
+        Insert: {
+          axis_type: string
+          completed?: boolean
+          created_at?: string
+          created_date: string
+          expiry_date: string
+          id?: string
+          points_to_reclaim?: number
+          reclaim_percentage?: number
+          user_id: string
+        }
+        Update: {
+          axis_type?: string
+          completed?: boolean
+          created_at?: string
+          created_date?: string
+          expiry_date?: string
+          id?: string
+          points_to_reclaim?: number
+          reclaim_percentage?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_logs: {
+        Row: {
+          consecutive_distraction: boolean
+          created_at: string
+          daily_note: string
+          date: string
+          distraction_istighfar: number
+          distraction_points: number
+          distraction_tier: string
+          id: string
+          mental_base_score: number
+          mental_deduction: number
+          mental_final_score: number
+          mental_status: string
+          physical_base_score: number
+          physical_deduction: number
+          physical_final_score: number
+          physical_status: string
+          religious_base_score: number
+          religious_deduction: number
+          religious_final_score: number
+          religious_status: string
+          total_score: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consecutive_distraction?: boolean
+          created_at?: string
+          daily_note?: string
+          date: string
+          distraction_istighfar?: number
+          distraction_points?: number
+          distraction_tier?: string
+          id?: string
+          mental_base_score?: number
+          mental_deduction?: number
+          mental_final_score?: number
+          mental_status?: string
+          physical_base_score?: number
+          physical_deduction?: number
+          physical_final_score?: number
+          physical_status?: string
+          religious_base_score?: number
+          religious_deduction?: number
+          religious_final_score?: number
+          religious_status?: string
+          total_score?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consecutive_distraction?: boolean
+          created_at?: string
+          daily_note?: string
+          date?: string
+          distraction_istighfar?: number
+          distraction_points?: number
+          distraction_tier?: string
+          id?: string
+          mental_base_score?: number
+          mental_deduction?: number
+          mental_final_score?: number
+          mental_status?: string
+          physical_base_score?: number
+          physical_deduction?: number
+          physical_final_score?: number
+          physical_status?: string
+          religious_base_score?: number
+          religious_deduction?: number
+          religious_final_score?: number
+          religious_status?: string
+          total_score?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          axis_weights: Json
+          created_at: string
+          email: string | null
+          goal_importance: string
+          id: string
+          name: string
+          phone: string
+          primary_goal: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          axis_weights?: Json
+          created_at?: string
+          email?: string | null
+          goal_importance?: string
+          id?: string
+          name: string
+          phone: string
+          primary_goal?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          axis_weights?: Json
+          created_at?: string
+          email?: string | null
+          goal_importance?: string
+          id?: string
+          name?: string
+          phone?: string
+          primary_goal?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
