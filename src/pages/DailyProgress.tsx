@@ -334,7 +334,8 @@ const DailyProgress = () => {
                     const score = getAxisScore(sel, maxScores[axisKey]);
                     setRecoveryModal({ axisKey, status: sel, pointsLost: score.deduction });
                     setRecoveryInput("");
-                    setRecoveryTaskType("");
+                    setRecoveryTaskDesc("");
+                    setRecoveryDetectedUnit(null);
                     setRecoveryResult(null);
                   } else {
                     setStep(step + 1);
