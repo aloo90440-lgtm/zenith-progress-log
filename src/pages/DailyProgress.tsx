@@ -367,7 +367,15 @@ const DailyProgress = () => {
 
               {/* Back button */}
               {step > 0 && !isDone && (
-                <button onClick={() => setStep(step - 1)}
+                <button onClick={() => {
+                  if (step === mentalStep && !hasDistractionTypeStep) {
+                    setStep(0);
+                  } else if (step === noteStep && !hasAppendedStep) {
+                    setStep(religiousStep);
+                  } else {
+                    setStep(step - 1);
+                  }
+                }}
                   className="w-full mt-3 text-muted-foreground text-sm font-sans-ui py-2 hover:text-foreground transition-colors">
                   رجوع
                 </button>
