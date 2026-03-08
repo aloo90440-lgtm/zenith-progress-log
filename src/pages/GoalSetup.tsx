@@ -87,7 +87,7 @@ const GoalSetup = () => {
   const handleSubmit = async () => {
     await updateProfile({
       name: name.trim(),
-      phone: phone.trim(),
+      phone: "+20" + phone.trim(),
       email: email.trim() || null,
       primary_goal: goal.trim(),
       goal_importance: importance.trim(),
