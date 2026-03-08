@@ -124,7 +124,7 @@ const DailyProgress = () => {
     await generateAndSaveAppendedTasks(axes, getTodayStr());
 
     setMessage(getMotivationalMessage());
-    setStep(hasAppendedStep ? 6 : 5);
+    setStep(doneStep);
   };
 
   const distractionTiers: DistractionTier[] = ['none', 'less_1h', '2_3h', '4h_plus'];
