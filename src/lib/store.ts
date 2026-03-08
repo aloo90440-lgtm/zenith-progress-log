@@ -321,8 +321,8 @@ export const AXIS_LABELS: Record<string, string> = {
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   completed: 'أتممت المهام بالكامل',
-  minor_lack: 'نقص بسيط (70%)',
-  major_lack: 'نقص كبير (30%)',
+  minor_lack: 'نقص بسيط (أنجزت أكثر من نصف المهمة)',
+  major_lack: 'نقص كبير (أنجزت أقل من نصف المهمة)',
   not_done: 'لم أنجز شيئًا',
 };
 
