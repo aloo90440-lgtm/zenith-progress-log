@@ -1,29 +1,49 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { saveUser, loadJourney, getAllAxisMaxScores } from "@/lib/store";
+import { getProfile, updateProfile, DbProfile } from "@/lib/supabase-store";
+import { getAllAxisMaxScores } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 
 const GoalSetup = () => {
   const navigate = useNavigate();
-  const existing = loadJourney().user;
   const [step, setStep] = useState(0);
-  const [name, setName] = useState(existing?.name || "");
-  const [phone, setPhone] = useState(existing?.phone || "");
-  const [email, setEmail] = useState(existing?.email || "");
-  const [goal, setGoal] = useState(existing?.primaryGoal || "");
-  const [importance, setImportance] = useState(existing?.goalImportance || "");
-  const [mentalWeight, setMentalWeight] = useState(existing?.axisWeights.mental || 50);
-  const [physicalWeight, setPhysicalWeight] = useState(existing?.axisWeights.physical || 50);
-  const [religiousWeight, setReligiousWeight] = useState(existing?.axisWeights.religious || 50);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [goal, setGoal] = useState("");
+  const [importance, setImportance] = useState("");
+  const [mentalWeight, setMentalWeight] = useState(50);
+  const [physicalWeight, setPhysicalWeight] = useState(50);
+  const [religiousWeight, setReligiousWeight] = useState(50);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getProfile().then(profile => {
+      if (profile) {
+        setName(profile.name || "");
+        setPhone(profile.phone || "");
+        setEmail(profile.email || "");
+        setGoal(profile.primary_goal || "");
+        setImportance(profile.goal_importance || "");
+        if (profile.axis_weights) {
+          setMentalWeight(profile.axis_weights.mental || 50);
+          setPhysicalWeight(profile.axis_weights.physical || 50);
+          setReligiousWeight(profile.axis_weights.religious || 50);
+        }
+      }
+      setLoading(false);
+    });
+  }, []);
 
   const validateStep = (): boolean => {
     setError("");
     if (step === 0) {
       if (!name.trim()) { setError("الاسم مطلوب"); return false; }
+      if (!phone.trim()) { setError("رقم التليفون مطلوب"); return false; }
       return true;
     }
     if (step === 1) {
@@ -61,19 +81,18 @@ const GoalSetup = () => {
     else handleSubmit();
   };
 
-  const handleSubmit = () => {
-    saveUser({
+  const handleSubmit = async () => {
+    await updateProfile({
       name: name.trim(),
-      phone: phone.trim() || undefined,
-      email: email.trim() || undefined,
-      primaryGoal: goal.trim(),
-      goalImportance: importance.trim(),
-      axisWeights: {
+      phone: phone.trim(),
+      email: email.trim() || null,
+      primary_goal: goal.trim(),
+      goal_importance: importance.trim(),
+      axis_weights: {
         mental: mentalWeight,
         physical: physicalWeight,
         religious: religiousWeight,
       },
-      createdAt: existing?.createdAt || new Date().toISOString(),
     });
     navigate("/dashboard");
   };
@@ -83,6 +102,8 @@ const GoalSetup = () => {
     { title: "ما هدفك؟", subtitle: "حدد رحلتك" },
     { title: "أوزان المحاور", subtitle: "حدد صعوبة كل محور" },
   ];
+
+  if (loading) return <div className="min-h-screen gradient-desert flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
     <div className="min-h-screen gradient-desert flex items-center justify-center px-6 py-12" dir="rtl">
@@ -122,12 +143,12 @@ const GoalSetup = () => {
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسمك الكامل" className="bg-card border-border text-foreground placeholder:text-muted-foreground/50" required />
             </div>
             <div>
-              <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">رقم الهاتف</label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="اختياري" className="bg-card border-border text-foreground placeholder:text-muted-foreground/50" />
+              <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">رقم الهاتف *</label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+201234567890" dir="ltr" className="bg-card border-border text-foreground placeholder:text-muted-foreground/50 text-left" required />
             </div>
             <div>
               <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">البريد الإلكتروني</label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="اختياري" className="bg-card border-border text-foreground placeholder:text-muted-foreground/50" />
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="اختياري" dir="ltr" className="bg-card border-border text-foreground placeholder:text-muted-foreground/50 text-left" />
             </div>
           </div>
         )}
@@ -180,7 +201,7 @@ const GoalSetup = () => {
                       value={[value]}
                       onValueChange={(v) => {
                         const newVal = v[0];
-                        if (newVal === 100 && isLocked) return; // block second 100%
+                        if (newVal === 100 && isLocked) return;
                         setter(newVal);
                       }}
                       min={10}
