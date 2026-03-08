@@ -38,8 +38,30 @@ const DailyProgress = () => {
     pointsLost: number;
   } | null>(null);
   const [recoveryInput, setRecoveryInput] = useState("");
-  const [recoveryUnit, setRecoveryUnit] = useState<'pages' | 'questions' | 'minutes' | 'hours'>('minutes');
+  const [recoveryTaskType, setRecoveryTaskType] = useState<string>("");
   const [recoveryResult, setRecoveryResult] = useState<{ value: number; unit: string } | null>(null);
+
+  // Axis-specific task types with units
+  const axisTaskTypes: Record<string, { label: string; unit: string; unitLabel: string }[]> = {
+    mental: [
+      { label: "قراءة (صفحات)", unit: "pages", unitLabel: "صفحة" },
+      { label: "قراءة (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+      { label: "حل أسئلة", unit: "questions", unitLabel: "سؤال" },
+      { label: "مراجعة (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+    ],
+    physical: [
+      { label: "تمرين ضغط (عدّات)", unit: "reps", unitLabel: "عدّة" },
+      { label: "تمرين (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+      { label: "جري / مشي (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+      { label: "تمرين سكوات (عدّات)", unit: "reps", unitLabel: "عدّة" },
+    ],
+    religious: [
+      { label: "قرآن (صفحات)", unit: "pages", unitLabel: "صفحة" },
+      { label: "قرآن (آيات)", unit: "ayat", unitLabel: "آية" },
+      { label: "أذكار (عدد)", unit: "count", unitLabel: "ذِكر" },
+      { label: "سماع قرآن (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+    ],
+  };
 
   useEffect(() => {
     const load = async () => {
