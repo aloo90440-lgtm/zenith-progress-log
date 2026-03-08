@@ -124,8 +124,8 @@ const DailyProgress = () => {
   const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void, axisKey: 'mental' | 'physical' | 'religious') => {
     const score = getAxisScore(status, maxScores[axisKey]);
     return (
-      <button key={status} onClick={(e) => { e.currentTarget.blur(); onSelect(status); }}
-        className={`w-full text-right p-4 rounded-xl border transition-all outline-none focus:outline-none focus-visible:outline-none ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
+      <button key={status} tabIndex={-1} onClick={() => onSelect(status)}
+        className={`w-full text-right p-4 rounded-xl border transition-all outline-none ring-0 ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
         <div className="flex items-center justify-center">
           <span className="text-foreground text-sm font-sans-ui">{STATUS_LABELS[status]}</span>
         </div>
@@ -225,8 +225,8 @@ const DailyProgress = () => {
                      {distractionTiers.map(tier => {
                        const info = getDistractionScore(tier);
                        return (
-                          <button key={tier} onClick={(e) => { e.currentTarget.blur(); setDistraction(tier); setStep(1); }}
-                            className={`w-full text-right p-4 rounded-xl border transition-all outline-none focus:outline-none focus-visible:outline-none ${distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
+                          <button key={tier} tabIndex={-1} onClick={() => { setDistraction(tier); setStep(1); }}
+                            className={`w-full text-right p-4 rounded-xl border transition-all outline-none ring-0 ${distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
                             <div className="flex items-center justify-center">
                               <span className="text-foreground text-sm font-sans-ui">{DISTRACTION_LABELS[tier]}</span>
                             </div>
