@@ -42,7 +42,6 @@ const WeeklyReport = () => {
     axisTotals.religious += l.religious_final_score;
   }
 
-  // Weakness
   const labels: Record<string, string> = { mental: 'الذهني', physical: 'الجسدي', religious: 'الديني' };
   let weakness: string | null = null;
   if (weeklyLogs.length > 0) {
@@ -51,19 +50,17 @@ const WeeklyReport = () => {
     weakness = weakAxis ? labels[weakAxis[0]] : null;
   }
 
-  // Distraction stats
   const cleanDays = weeklyLogs.filter(l => l.distraction_tier === 'none').length;
 
-  // Notes
   const notes = weeklyLogs
     .filter(l => l.daily_note.trim())
     .map(l => ({ date: l.date, note: l.daily_note }));
 
   return (
-    <div className="min-h-screen gradient-desert px-6 py-8 pb-24" dir="rtl">
+    <div className="min-h-screen gradient-desert px-4 sm:px-6 py-8 pb-28" dir="rtl">
       <div className="max-w-2xl mx-auto">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <p className="text-dust text-xs tracking-[0.2em] font-sans-ui">تقرير</p>
+          <p className="text-muted-foreground text-xs tracking-[0.2em] font-sans-ui">تقرير</p>
           <h1 className="font-serif-display text-2xl sm:text-3xl font-semibold text-foreground mt-1 mb-8">التقرير الأسبوعي</h1>
         </motion.div>
 
@@ -91,7 +88,7 @@ const WeeklyReport = () => {
                       <span className="text-foreground">{AXIS_LABELS[key]}</span>
                       <span className="text-primary">{total}/{maxForAxis}</span>
                     </div>
-                    <div className="h-2 bg-border rounded-full overflow-hidden">
+                    <div className="h-2.5 bg-border rounded-full overflow-hidden">
                       <div className="h-full bg-primary/70 rounded-full transition-all" style={{ width: `${maxForAxis > 0 ? (total / maxForAxis) * 100 : 0}%` }} />
                     </div>
                   </div>
@@ -102,7 +99,7 @@ const WeeklyReport = () => {
                   <span className="text-foreground">المشتتات</span>
                   <span className="text-primary">{distractionTotal}/{weeklyLogs.length * 10}</span>
                 </div>
-                <div className="h-2 bg-border rounded-full overflow-hidden">
+                <div className="h-2.5 bg-border rounded-full overflow-hidden">
                   <div className="h-full bg-accent/70 rounded-full transition-all" style={{ width: `${weeklyLogs.length > 0 ? (distractionTotal / (weeklyLogs.length * 10)) * 100 : 0}%` }} />
                 </div>
               </div>
@@ -138,7 +135,7 @@ const WeeklyReport = () => {
                 <div className="space-y-3">
                   {notes.map((n, i) => (
                     <div key={i} className="border-r-2 border-primary/30 pr-3">
-                      <p className="text-[10px] text-muted-foreground font-sans-ui">{new Date(n.date).toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "short" })}</p>
+                      <p className="text-xs text-muted-foreground font-sans-ui">{new Date(n.date).toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "short" })}</p>
                       <p className="text-foreground text-sm mt-0.5">{n.note}</p>
                     </div>
                   ))}
@@ -149,19 +146,19 @@ const WeeklyReport = () => {
         )}
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-6 py-3 z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-4 py-3 z-50">
         <div className="max-w-2xl mx-auto flex justify-around">
           <Link to="/dashboard" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-            <Footprints className="w-5 h-5" /><span className="text-[10px] font-sans-ui">الرحلة</span>
+            <Footprints className="w-5 h-5" /><span className="text-xs font-sans-ui">الرحلة</span>
           </Link>
           <Link to="/progress" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-            <TrendingUp className="w-5 h-5" /><span className="text-[10px] font-sans-ui">التقييم</span>
+            <TrendingUp className="w-5 h-5" /><span className="text-xs font-sans-ui">التقييم</span>
           </Link>
           <Link to="/statistics" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-            <BarChart3 className="w-5 h-5" /><span className="text-[10px] font-sans-ui">الإحصائيات</span>
+            <BarChart3 className="w-5 h-5" /><span className="text-xs font-sans-ui">الإحصائيات</span>
           </Link>
           <Link to="/weekly" className="flex flex-col items-center gap-1 text-primary">
-            <FileText className="w-5 h-5" /><span className="text-[10px] font-sans-ui">التقرير</span>
+            <FileText className="w-5 h-5" /><span className="text-xs font-sans-ui">التقرير</span>
           </Link>
         </div>
       </nav>

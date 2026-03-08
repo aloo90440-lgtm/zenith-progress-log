@@ -40,7 +40,11 @@ const DailyProgress = () => {
       const pending = await getPendingAppendedTasksDb(getTodayStr());
       setPendingTasks(pending);
 
-      // Don't pre-fill selections so the form starts fresh each visit
+      // Load saved data for daily note only (not selections, to keep form fresh)
+      const todayLog = await getTodayLog();
+      if (todayLog) {
+        setDailyNote(todayLog.daily_note);
+      }
 
       setLoading(false);
     };
@@ -140,7 +144,7 @@ const DailyProgress = () => {
   const isDone = step === (hasAppendedStep ? 6 : 5);
 
   return (
-    <div className="min-h-screen gradient-desert flex items-center justify-center px-6 py-12 pb-24" dir="rtl">
+    <div className="min-h-screen gradient-desert flex items-center justify-center px-4 sm:px-6 py-12 pb-28" dir="rtl">
       <div className="w-full max-w-lg">
         <AnimatePresence mode="wait">
           {isDone ? (
@@ -332,19 +336,19 @@ const DailyProgress = () => {
       </div>
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-6 py-3 z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-4 py-3 z-50">
         <div className="max-w-2xl mx-auto flex justify-around">
           <Link to="/dashboard" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-            <Footprints className="w-5 h-5" /><span className="text-[10px] font-sans-ui">الرحلة</span>
+            <Footprints className="w-5 h-5" /><span className="text-xs font-sans-ui">الرحلة</span>
           </Link>
           <Link to="/progress" className="flex flex-col items-center gap-1 text-primary">
-            <TrendingUp className="w-5 h-5" /><span className="text-[10px] font-sans-ui">التقييم</span>
+            <TrendingUp className="w-5 h-5" /><span className="text-xs font-sans-ui">التقييم</span>
           </Link>
           <Link to="/statistics" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-            <BarChart3 className="w-5 h-5" /><span className="text-[10px] font-sans-ui">الإحصائيات</span>
+            <BarChart3 className="w-5 h-5" /><span className="text-xs font-sans-ui">الإحصائيات</span>
           </Link>
           <Link to="/weekly" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-            <FileText className="w-5 h-5" /><span className="text-[10px] font-sans-ui">التقرير</span>
+            <FileText className="w-5 h-5" /><span className="text-xs font-sans-ui">التقرير</span>
           </Link>
         </div>
       </nav>
