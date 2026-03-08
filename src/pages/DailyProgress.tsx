@@ -170,16 +170,17 @@ const DailyProgress = () => {
 
               {/* Steps 1-3: Axes */}
               {[1, 2, 3].includes(step) && (() => {
-                const axisKey = step === 1 ? 'mental' : step === 2 ? 'physical' : 'religious';
+                const axisKey = (step === 1 ? 'mental' : step === 2 ? 'physical' : 'religious') as 'mental' | 'physical' | 'religious';
                 const currentStatus = step === 1 ? mentalStatus : step === 2 ? physicalStatus : religiousStatus;
                 const setter = step === 1 ? setMentalStatus : step === 2 ? setPhysicalStatus : setReligiousStatus;
                 return (
                   <div>
                     <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {step}/3</p>
-                    <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">{AXIS_LABELS[axisKey]}</h2>
+                    <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-2 text-center">{AXIS_LABELS[axisKey]}</h2>
+                    <p className="text-accent text-xs text-center mb-4 font-sans-ui">الحد الأقصى: {maxScores[axisKey].toFixed(1)} نقطة (صعوبة {userWeights[axisKey]}%)</p>
                     <p className="text-muted-foreground text-sm mb-6 text-center">ما نسبة إتمامك لمهام هذا المحور اليوم؟</p>
                     <div className="space-y-3">
-                      {taskStatuses.map(s => renderStatusOption(s, currentStatus, (sel) => { setter(sel); setStep(step + 1); }))}
+                      {taskStatuses.map(s => renderStatusOption(s, currentStatus, (sel) => { setter(sel); setStep(step + 1); }, axisKey))}
                     </div>
                   </div>
                 );
