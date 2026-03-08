@@ -25,7 +25,8 @@ const GoalSetup = () => {
     getProfile().then(profile => {
       if (profile) {
         setName(profile.name || "");
-        setPhone(profile.phone || "");
+        const rawPhone = profile.phone || "";
+        setPhone(rawPhone.startsWith("+20") ? rawPhone.slice(3) : rawPhone.replace(/^0/, ''));
         setEmail(profile.email || "");
         setGoal(profile.primary_goal || "");
         setImportance(profile.goal_importance || "");
@@ -43,7 +44,10 @@ const GoalSetup = () => {
     setError("");
     if (step === 0) {
       if (!name.trim()) { setError("الاسم مطلوب"); return false; }
+      if (!/^[\u0600-\u06FFa-zA-Z\s]+$/.test(name.trim())) { setError("الاسم يجب أن يحتوي على حروف فقط"); return false; }
       if (!phone.trim()) { setError("رقم التليفون مطلوب"); return false; }
+      const digitsOnly = phone.replace(/\D/g, '');
+      if (digitsOnly.length < 10 || digitsOnly.length > 11) { setError("رقم الهاتف يجب أن يكون ١٠ أو ١١ رقم"); return false; }
       return true;
     }
     if (step === 1) {
@@ -84,7 +88,7 @@ const GoalSetup = () => {
   const handleSubmit = async () => {
     await updateProfile({
       name: name.trim(),
-      phone: phone.trim(),
+      phone: "+20" + phone.trim(),
       email: email.trim() || null,
       primary_goal: goal.trim(),
       goal_importance: importance.trim(),
@@ -140,11 +144,37 @@ const GoalSetup = () => {
           <div className="space-y-5">
             <div>
               <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">الاسم *</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسمك الكامل" className="bg-card border-border text-foreground placeholder:text-muted-foreground/50" required />
+              <Input
+                value={name}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-Z\u0600-\u06FF\s]/g, '');
+                  setName(val);
+                }}
+                placeholder="اسمك الكامل"
+                className="bg-card border-border text-foreground placeholder:text-muted-foreground/50"
+                required
+              />
             </div>
             <div>
               <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">رقم الهاتف *</label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+201234567890" dir="ltr" className="bg-card border-border text-foreground placeholder:text-muted-foreground/50 text-left" required />
+              <div className="flex gap-2" dir="ltr">
+                <div className="flex items-center justify-center bg-card border border-border rounded-md px-3 text-foreground text-sm font-sans-ui min-w-[60px]">
+                  +20
+                </div>
+                <Input
+                  value={phone}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/\D/g, '');
+                    // Remove leading zero if present
+                    if (val.startsWith('0')) val = val.slice(1);
+                    if (val.length <= 10) setPhone(val);
+                  }}
+                  placeholder="1234567890"
+                  className="bg-card border-border text-foreground placeholder:text-muted-foreground/50 text-left flex-1"
+                  required
+                  maxLength={10}
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">البريد الإلكتروني</label>
