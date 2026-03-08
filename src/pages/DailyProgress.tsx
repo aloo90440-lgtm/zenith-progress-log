@@ -126,8 +126,7 @@ const DailyProgress = () => {
     return (
       <button key={status} onClick={() => onSelect(status)}
         className={`w-full text-right p-4 rounded-xl border transition-all ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
-        <div className="flex justify-between items-center">
-          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/{maxScores[axisKey]}</span>
+        <div className="flex items-center justify-center">
           <span className="text-foreground text-sm font-sans-ui">{STATUS_LABELS[status]}</span>
         </div>
       </button>
@@ -146,7 +145,55 @@ const DailyProgress = () => {
                 <Footprints className="w-8 h-8 text-primary" />
               </div>
               <h2 className="font-serif-display text-3xl font-semibold text-foreground mb-2">{totalScore}/40</h2>
-              <p className="text-muted-foreground text-lg mb-8 italic max-w-sm mx-auto">"{message}"</p>
+              <p className="text-muted-foreground text-lg mb-6 italic max-w-sm mx-auto">"{message}"</p>
+
+              {/* Score Breakdown */}
+              {(() => {
+                const distractionEntry = distraction ? getDistractionScore(distraction) : null;
+                const mentalScore = mentalStatus ? getAxisScore(mentalStatus, maxScores.mental) : null;
+                const physicalScore = physicalStatus ? getAxisScore(physicalStatus, maxScores.physical) : null;
+                const religiousScore = religiousStatus ? getAxisScore(religiousStatus, maxScores.religious) : null;
+
+                const losses: { label: string; lost: number }[] = [];
+                if (mentalScore && mentalScore.deduction > 0) losses.push({ label: AXIS_LABELS.mental, lost: mentalScore.deduction });
+                if (physicalScore && physicalScore.deduction > 0) losses.push({ label: AXIS_LABELS.physical, lost: physicalScore.deduction });
+                if (religiousScore && religiousScore.deduction > 0) losses.push({ label: AXIS_LABELS.religious, lost: religiousScore.deduction });
+                if (distractionEntry && distractionEntry.points < 10) losses.push({ label: "المشتتات", lost: 10 - distractionEntry.points });
+
+                return (
+                  <div className="bg-card border border-border rounded-xl p-4 mb-6 text-right space-y-2">
+                    <p className="text-foreground text-sm font-sans-ui font-semibold mb-3 text-center">تفصيل النتيجة</p>
+                    <div className="flex justify-between text-sm font-sans-ui">
+                      <span className="text-primary font-semibold">{mentalScore?.finalScore}/{maxScores.mental}</span>
+                      <span className="text-muted-foreground">{AXIS_LABELS.mental}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-sans-ui">
+                      <span className="text-primary font-semibold">{physicalScore?.finalScore}/{maxScores.physical}</span>
+                      <span className="text-muted-foreground">{AXIS_LABELS.physical}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-sans-ui">
+                      <span className="text-primary font-semibold">{religiousScore?.finalScore}/{maxScores.religious}</span>
+                      <span className="text-muted-foreground">{AXIS_LABELS.religious}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-sans-ui">
+                      <span className="text-primary font-semibold">{distractionEntry?.points}/10</span>
+                      <span className="text-muted-foreground">المشتتات</span>
+                    </div>
+                    {losses.length > 0 && (
+                      <>
+                        <div className="border-t border-border my-2" />
+                        <p className="text-destructive text-xs font-sans-ui text-center mb-1">النقاط المفقودة</p>
+                        {losses.map((l, i) => (
+                          <div key={i} className="flex justify-between text-xs font-sans-ui">
+                            <span className="text-destructive">-{l.lost}</span>
+                            <span className="text-muted-foreground">{l.label}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {distraction && getDistractionScore(distraction).istighfarMinutes > 0 && (
                 <div className="bg-accent/10 border border-accent/30 rounded-xl p-4 mb-6 text-center">
