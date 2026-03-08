@@ -180,10 +180,9 @@ const DailyProgress = () => {
                        return (
                          <button key={tier} onClick={() => { setDistraction(tier); setStep(1); }}
                            className={`w-full text-right p-4 rounded-xl border transition-all ${distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
-                           <div className="flex items-center justify-center">
-                             <span className="text-foreground text-sm font-sans-ui">{DISTRACTION_LABELS[tier]}</span>
-                             {info.istighfarMinutes > 0 && <span className="text-accent text-[10px] mr-2">+ {info.istighfarMinutes} دقيقة استغفار</span>}
-                           </div>
+                            <div className="flex items-center justify-center">
+                              <span className="text-foreground text-sm font-sans-ui">{DISTRACTION_LABELS[tier]}</span>
+                            </div>
                          </button>
                        );
                      })}
