@@ -95,6 +95,7 @@ const DailyProgress = () => {
     await saveDailyLogDb({
       date: getTodayStr(),
       distraction_tier: distraction,
+      distraction_type: distractionType || '',
       distraction_points: distractionEntry.points,
       distraction_istighfar: distractionEntry.istighfarMinutes,
       mental_status: mentalStatus,
