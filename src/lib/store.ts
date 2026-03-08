@@ -104,18 +104,18 @@ export function getAllAxisMaxScores(weights: { mental: number; physical: number;
     religious: (weights.religious / totalWeight) * 30,
   };
   
-  // Round while preserving total of 30
+  // Round to integers while preserving total of 30
   const rounded = {
-    mental: Math.round(raw.mental * 10) / 10,
-    physical: Math.round(raw.physical * 10) / 10,
-    religious: Math.round(raw.religious * 10) / 10,
+    mental: Math.round(raw.mental),
+    physical: Math.round(raw.physical),
+    religious: Math.round(raw.religious),
   };
   
   // Adjust rounding error on the largest
   const diff = 30 - (rounded.mental + rounded.physical + rounded.religious);
-  if (Math.abs(diff) > 0.01) {
+  if (diff !== 0) {
     const largest = Object.entries(rounded).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof rounded;
-    rounded[largest] = Math.round((rounded[largest] + diff) * 10) / 10;
+    rounded[largest] += diff;
   }
   
   return rounded;
