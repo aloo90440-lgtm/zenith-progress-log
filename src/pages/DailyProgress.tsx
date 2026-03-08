@@ -144,7 +144,7 @@ const DailyProgress = () => {
   const isDone = step === (hasAppendedStep ? 6 : 5);
 
   return (
-    <div className="min-h-screen gradient-desert flex items-center justify-center px-6 py-12 pb-24" dir="rtl">
+    <div className="min-h-screen gradient-desert flex items-center justify-center px-4 sm:px-6 py-12 pb-28" dir="rtl">
       <div className="w-full max-w-lg">
         <AnimatePresence mode="wait">
           {isDone ? (
