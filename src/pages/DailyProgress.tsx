@@ -38,29 +38,32 @@ const DailyProgress = () => {
     pointsLost: number;
   } | null>(null);
   const [recoveryInput, setRecoveryInput] = useState("");
-  const [recoveryTaskType, setRecoveryTaskType] = useState<string>("");
+  const [recoveryTaskDesc, setRecoveryTaskDesc] = useState("");
+  const [recoveryDetectedUnit, setRecoveryDetectedUnit] = useState<{ unit: string; unitLabel: string } | null>(null);
   const [recoveryResult, setRecoveryResult] = useState<{ value: number; unit: string } | null>(null);
 
-  // Axis-specific task types with units
-  const axisTaskTypes: Record<string, { label: string; unit: string; unitLabel: string }[]> = {
-    mental: [
-      { label: "قراءة (صفحات)", unit: "pages", unitLabel: "صفحة" },
-      { label: "قراءة (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-      { label: "حل أسئلة", unit: "questions", unitLabel: "سؤال" },
-      { label: "مراجعة (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-    ],
-    physical: [
-      { label: "تمرين ضغط (عدّات)", unit: "reps", unitLabel: "عدّة" },
-      { label: "تمرين (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-      { label: "جري / مشي (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-      { label: "تمرين سكوات (عدّات)", unit: "reps", unitLabel: "عدّة" },
-    ],
-    religious: [
-      { label: "قرآن (صفحات)", unit: "pages", unitLabel: "صفحة" },
-      { label: "قرآن (آيات)", unit: "ayat", unitLabel: "آية" },
-      { label: "أذكار (عدد)", unit: "count", unitLabel: "ذِكر" },
-      { label: "سماع قرآن (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-    ],
+  // Smart unit detection from task description keywords
+  const detectUnitFromTask = (text: string): { unit: string; unitLabel: string } | null => {
+    const t = text.trim().toLowerCase();
+    // Pages
+    if (/صفح|قراءة|قرا|كتاب|مذاكر|مراجع|ورق/.test(t)) return { unit: "pages", unitLabel: "صفحة" };
+    // Questions
+    if (/سؤال|اسئل|أسئل|حل|مسأل|مسائل|تمارين ذهن/.test(t)) return { unit: "questions", unitLabel: "سؤال" };
+    // Reps (exercise)
+    if (/ضغط|سكوات|عقل|بطن|تمرين|عدات|عدّات|بلانك|pull|push/.test(t)) return { unit: "reps", unitLabel: "عدّة" };
+    // Quran ayat
+    if (/آي[اة]|ايات|آيات/.test(t)) return { unit: "ayat", unitLabel: "آية" };
+    // Quran pages
+    if (/قرآن|قران|حفظ|تلاو/.test(t)) return { unit: "pages", unitLabel: "صفحة" };
+    // Athkar
+    if (/ذكر|أذكار|اذكار|استغفار|تسبيح|صلاة على/.test(t)) return { unit: "count", unitLabel: "ذِكر" };
+    // Running/walking
+    if (/جري|مشي|سباح|ركض/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
+    // Listen
+    if (/سماع|استماع|بودكاست|محاضر/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
+    // Generic time
+    if (/دقيق|وقت|ساع|زمن/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
+    return null;
   };
 
   useEffect(() => {
@@ -331,7 +334,8 @@ const DailyProgress = () => {
                     const score = getAxisScore(sel, maxScores[axisKey]);
                     setRecoveryModal({ axisKey, status: sel, pointsLost: score.deduction });
                     setRecoveryInput("");
-                    setRecoveryTaskType("");
+                    setRecoveryTaskDesc("");
+                    setRecoveryDetectedUnit(null);
                     setRecoveryResult(null);
                   } else {
                     setStep(step + 1);
@@ -367,59 +371,66 @@ const DailyProgress = () => {
                             يمكنك تعويض النقاط في اليوم التالي
                           </p>
                           <p className="text-foreground text-sm text-center font-sans-ui font-bold">
-                            اختر نوع المهمة التعويضية ثم أدخل الكمية
+                            اكتب المهمة التي ستعوض بها وسأحدد الوحدة تلقائيًا
                           </p>
-                          {/* Task type buttons */}
-                          <div className="grid grid-cols-2 gap-2">
-                            {axisTaskTypes[recoveryModal.axisKey]?.map((taskType) => (
-                              <button
-                                key={taskType.label}
-                                onClick={() => {
-                                  setRecoveryTaskType(taskType.label);
-                                  setRecoveryInput("");
-                                  setRecoveryResult(null);
-                                }}
-                                className={`p-2.5 rounded-lg border text-xs font-sans-ui transition-all ${
-                                  recoveryTaskType === taskType.label
-                                    ? 'border-primary bg-primary/15 text-primary font-semibold'
-                                    : 'border-border bg-background hover:border-primary/30 text-foreground'
-                                }`}
-                              >
-                                {taskType.label}
-                              </button>
-                            ))}
-                          </div>
+                          {/* Task description input */}
+                          <Input
+                            type="text"
+                            placeholder="مثال: قراءة، ضغط، قرآن، أذكار..."
+                            value={recoveryTaskDesc}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setRecoveryTaskDesc(val);
+                              const detected = detectUnitFromTask(val);
+                              setRecoveryDetectedUnit(detected);
+                              setRecoveryInput("");
+                              setRecoveryResult(null);
+                            }}
+                            className="text-center text-base"
+                            dir="rtl"
+                          />
 
-                          {/* Input appears after selecting task type */}
-                          {recoveryTaskType && (() => {
-                            const selectedTask = axisTaskTypes[recoveryModal.axisKey]?.find(t => t.label === recoveryTaskType);
-                            if (!selectedTask) return null;
-                            return (
-                              <div className="flex gap-2 items-center">
-                                <Input
-                                  type="number"
-                                  placeholder={`أدخل عدد ${selectedTask.unitLabel}`}
-                                  value={recoveryInput}
-                                  onChange={(e) => {
-                                    setRecoveryInput(e.target.value);
-                                    const val = parseFloat(e.target.value);
-                                    if (!isNaN(val) && val > 0) {
-                                      const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
-                                      const result = Math.round(val * pct * 100) / 100;
-                                      setRecoveryResult({ value: result, unit: selectedTask.unitLabel });
-                                    } else {
-                                      setRecoveryResult(null);
-                                    }
-                                  }}
-                                  className="text-center text-lg flex-1"
-                                  dir="rtl"
-                                />
-                                <span className="text-sm font-sans-ui text-muted-foreground whitespace-nowrap">
-                                  {selectedTask.unitLabel}
-                                </span>
-                              </div>
-                            );
-                          })()}
+                          {/* Detected unit badge */}
+                          {recoveryDetectedUnit && (
+                            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+                              <span className="inline-block bg-primary/10 text-primary text-xs font-sans-ui px-3 py-1.5 rounded-full">
+                                ✓ الوحدة: {recoveryDetectedUnit.unitLabel}
+                              </span>
+                            </motion.div>
+                          )}
+
+                          {recoveryTaskDesc && !recoveryDetectedUnit && (
+                            <p className="text-xs text-muted-foreground text-center font-sans-ui">
+                              لم أتعرف على نوع المهمة، جرّب كلمات مثل: قراءة، ضغط، قرآن، أذكار، جري...
+                            </p>
+                          )}
+
+                          {/* Quantity input appears after detection */}
+                          {recoveryDetectedUnit && (
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2 items-center">
+                              <Input
+                                type="number"
+                                placeholder={`كم ${recoveryDetectedUnit.unitLabel}؟`}
+                                value={recoveryInput}
+                                onChange={(e) => {
+                                  setRecoveryInput(e.target.value);
+                                  const num = parseFloat(e.target.value);
+                                  if (!isNaN(num) && num > 0 && recoveryDetectedUnit) {
+                                    const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
+                                    const result = Math.round(num * pct * 100) / 100;
+                                    setRecoveryResult({ value: result, unit: recoveryDetectedUnit.unitLabel });
+                                  } else {
+                                    setRecoveryResult(null);
+                                  }
+                                }}
+                                className="text-center text-lg flex-1"
+                                dir="rtl"
+                              />
+                              <span className="text-sm font-sans-ui text-muted-foreground whitespace-nowrap">
+                                {recoveryDetectedUnit.unitLabel}
+                              </span>
+                            </motion.div>
+                          )}
                           {recoveryResult !== null && (
                             <>
                               <motion.p
