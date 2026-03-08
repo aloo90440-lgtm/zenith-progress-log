@@ -64,24 +64,27 @@ const WeeklyReport = () => {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
               className="bg-card border border-border rounded-xl p-5 shadow-sand">
               <h3 className="text-sm font-sans-ui text-muted-foreground mb-4">أداء المحاور</h3>
-              {Object.entries(axisTotals).map(([key, total]) => (
-                <div key={key} className="mb-3 last:mb-0">
-                  <div className="flex justify-between text-sm font-sans-ui mb-1">
-                    <span className="text-foreground">{AXIS_LABELS[key]}</span>
-                    <span className="text-primary">{total}/{maxAxisScore}</span>
+              {(Object.entries(axisTotals) as Array<['mental' | 'physical' | 'religious', number]>).map(([key, total]) => {
+                const maxForAxis = weeklyLogs.length * maxPerDay[key];
+                return (
+                  <div key={key} className="mb-3 last:mb-0">
+                    <div className="flex justify-between text-sm font-sans-ui mb-1">
+                      <span className="text-foreground">{AXIS_LABELS[key]}</span>
+                      <span className="text-primary">{total.toFixed(1)}/{maxForAxis.toFixed(1)}</span>
+                    </div>
+                    <div className="h-2 bg-border rounded-full overflow-hidden">
+                      <div className="h-full bg-primary/70 rounded-full transition-all" style={{ width: `${maxForAxis > 0 ? (total / maxForAxis) * 100 : 0}%` }} />
+                    </div>
                   </div>
-                  <div className="h-2 bg-border rounded-full overflow-hidden">
-                    <div className="h-full bg-primary/70 rounded-full transition-all" style={{ width: `${maxAxisScore > 0 ? (total / maxAxisScore) * 100 : 0}%` }} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="mt-3">
                 <div className="flex justify-between text-sm font-sans-ui mb-1">
                   <span className="text-foreground">المشتتات</span>
-                  <span className="text-primary">{distractionTotal}/{maxAxisScore}</span>
+                  <span className="text-primary">{distractionTotal}/{weeklyLogs.length * 10}</span>
                 </div>
                 <div className="h-2 bg-border rounded-full overflow-hidden">
-                  <div className="h-full bg-accent/70 rounded-full transition-all" style={{ width: `${maxAxisScore > 0 ? (distractionTotal / maxAxisScore) * 100 : 0}%` }} />
+                  <div className="h-full bg-accent/70 rounded-full transition-all" style={{ width: `${weeklyLogs.length > 0 ? (distractionTotal / (weeklyLogs.length * 10)) * 100 : 0}%` }} />
                 </div>
               </div>
             </motion.div>
