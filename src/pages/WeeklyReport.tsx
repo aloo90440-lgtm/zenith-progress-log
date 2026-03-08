@@ -56,7 +56,7 @@ const WeeklyReport = () => {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               className="bg-card border border-border rounded-xl p-6 text-center shadow-sand">
               <p className="text-5xl font-serif-display font-bold text-foreground">{weeklyScore}</p>
-              <p className="text-muted-foreground text-sm font-sans-ui mt-1">من ٢٠٠ نقطة</p>
+              <p className="text-muted-foreground text-sm font-sans-ui mt-1">من {weeklyLogs.length * 40} نقطة</p>
               <p className={`text-lg font-serif-display font-semibold mt-2 ${rating.color}`}>{rating.label}</p>
             </motion.div>
 
