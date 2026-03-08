@@ -59,6 +59,7 @@ export type Database = {
           distraction_istighfar: number
           distraction_points: number
           distraction_tier: string
+          distraction_type: string
           id: string
           mental_base_score: number
           mental_deduction: number
@@ -84,6 +85,7 @@ export type Database = {
           distraction_istighfar?: number
           distraction_points?: number
           distraction_tier?: string
+          distraction_type?: string
           id?: string
           mental_base_score?: number
           mental_deduction?: number
@@ -109,6 +111,7 @@ export type Database = {
           distraction_istighfar?: number
           distraction_points?: number
           distraction_tier?: string
+          distraction_type?: string
           id?: string
           mental_base_score?: number
           mental_deduction?: number
