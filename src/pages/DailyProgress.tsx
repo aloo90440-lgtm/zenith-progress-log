@@ -225,8 +225,8 @@ const DailyProgress = () => {
                      {distractionTiers.map(tier => {
                        const info = getDistractionScore(tier);
                        return (
-                          <button key={tier} onClick={(e) => { e.currentTarget.blur(); setDistraction(tier); setStep(1); }}
-                            className={`w-full text-right p-4 rounded-xl border transition-all outline-none focus:outline-none focus-visible:outline-none ${distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
+                          <button key={tier} tabIndex={-1} onClick={() => { setDistraction(tier); setStep(1); }}
+                            className={`w-full text-right p-4 rounded-xl border transition-all outline-none ring-0 ${distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
                             <div className="flex items-center justify-center">
                               <span className="text-foreground text-sm font-sans-ui">{DISTRACTION_LABELS[tier]}</span>
                             </div>
