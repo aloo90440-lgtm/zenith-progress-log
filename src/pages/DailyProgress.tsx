@@ -19,6 +19,7 @@ const DailyProgress = () => {
   const [step, setStep] = useState(0);
   const [pendingSelection, setPendingSelection] = useState<string | null>(null);
   const [distraction, setDistraction] = useState<DistractionTier | null>(null);
+  const [distractionType, setDistractionType] = useState<DistractionType | null>(null);
   const [mentalStatus, setMentalStatus] = useState<TaskStatus | null>(null);
   const [physicalStatus, setPhysicalStatus] = useState<TaskStatus | null>(null);
   const [religiousStatus, setReligiousStatus] = useState<TaskStatus | null>(null);
