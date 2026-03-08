@@ -39,14 +39,7 @@ const DailyProgress = () => {
       const pending = await getPendingAppendedTasksDb(getTodayStr());
       setPendingTasks(pending);
 
-      const todayLog = await getTodayLog();
-      if (todayLog) {
-        setDistraction(todayLog.distraction_tier as DistractionTier);
-        setMentalStatus(todayLog.mental_status as TaskStatus);
-        setPhysicalStatus(todayLog.physical_status as TaskStatus);
-        setReligiousStatus(todayLog.religious_status as TaskStatus);
-        setDailyNote(todayLog.daily_note);
-      }
+      // Don't pre-fill selections so the form starts fresh each visit
 
       setLoading(false);
     };
