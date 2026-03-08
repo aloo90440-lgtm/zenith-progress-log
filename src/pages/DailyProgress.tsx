@@ -38,7 +38,8 @@ const DailyProgress = () => {
     pointsLost: number;
   } | null>(null);
   const [recoveryInput, setRecoveryInput] = useState("");
-  const [recoveryResult, setRecoveryResult] = useState<number | null>(null);
+  const [recoveryUnit, setRecoveryUnit] = useState<'pages' | 'questions' | 'minutes' | 'hours'>('minutes');
+  const [recoveryResult, setRecoveryResult] = useState<{ value: number; unit: string } | null>(null);
 
   useEffect(() => {
     const load = async () => {
