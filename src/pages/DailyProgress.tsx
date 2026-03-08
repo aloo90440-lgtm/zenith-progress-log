@@ -152,7 +152,8 @@ const DailyProgress = () => {
     );
   };
 
-  const isDone = step === (hasAppendedStep ? 6 : 5);
+  const distractionTypes: DistractionType[] = ['social', 'movies', 'music', 'other'];
+  const isDone = step === doneStep;
 
   return (
     <div className="min-h-screen gradient-desert flex items-center justify-center px-4 sm:px-6 py-12 pb-28" dir="rtl">
