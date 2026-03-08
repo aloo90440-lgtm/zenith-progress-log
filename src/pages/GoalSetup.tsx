@@ -190,7 +190,8 @@ const GoalSetup = () => {
               <Input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="مثال: حفظ القرآن كاملاً" className="bg-card border-border text-foreground placeholder:text-muted-foreground/50" required />
             </div>
             <div>
-              <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">لماذا هذا الهدف مهم؟ * (٢ إلى ٥ أسطر)</label>
+              <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">لماذا هذا الهدف مهم؟ *</label>
+              <p className="text-sm font-bold text-foreground mb-2">سيتم تذكيرك بما كتبته هنا عند انخفاض العزيمة</p>
               <Textarea
                 value={importance}
                 onChange={(e) => setImportance(e.target.value)}
