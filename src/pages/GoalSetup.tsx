@@ -25,7 +25,8 @@ const GoalSetup = () => {
     getProfile().then(profile => {
       if (profile) {
         setName(profile.name || "");
-        setPhone(profile.phone || "");
+        const rawPhone = profile.phone || "";
+        setPhone(rawPhone.startsWith("+20") ? rawPhone.slice(3) : rawPhone.replace(/^0/, ''));
         setEmail(profile.email || "");
         setGoal(profile.primary_goal || "");
         setImportance(profile.goal_importance || "");
