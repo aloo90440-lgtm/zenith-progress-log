@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   loadJourney, saveDailyLog, getTodayStr, getMotivationalMessage,
   getAxisScore, getDistractionScore, checkConsecutiveDistraction,
-  calculateDailyTotal, getPendingAppendedTasks,
+  calculateDailyTotal, getPendingAppendedTasks, getAllAxisMaxScores,
   TaskStatus, DistractionTier, AxisEntry, AppendedTask,
   AXIS_LABELS, STATUS_LABELS, DISTRACTION_LABELS,
 } from "@/lib/store";
@@ -53,11 +53,13 @@ const DailyProgress = () => {
     if (!distraction || !mentalStatus || !physicalStatus || !religiousStatus) return;
 
     const data = loadJourney();
+    const weights = data.user!.axisWeights;
+    const maxScores = getAllAxisMaxScores(weights);
     const distractionEntry = getDistractionScore(distraction);
     const axes = {
-      mental: { ...getAxisScore(mentalStatus), status: mentalStatus } as AxisEntry,
-      physical: { ...getAxisScore(physicalStatus), status: physicalStatus } as AxisEntry,
-      religious: { ...getAxisScore(religiousStatus), status: religiousStatus } as AxisEntry,
+      mental: { ...getAxisScore(mentalStatus, maxScores.mental), status: mentalStatus } as AxisEntry,
+      physical: { ...getAxisScore(physicalStatus, maxScores.physical), status: physicalStatus } as AxisEntry,
+      religious: { ...getAxisScore(religiousStatus, maxScores.religious), status: religiousStatus } as AxisEntry,
     };
 
     const consecutive = checkConsecutiveDistraction(data.logs, getTodayStr());
@@ -88,13 +90,17 @@ const DailyProgress = () => {
   const distractionTiers: DistractionTier[] = ['none', 'less_1h', '2_3h', '4h_plus'];
   const taskStatuses: TaskStatus[] = ['completed', 'minor_lack', 'major_lack', 'not_done'];
 
-  const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void) => {
-    const score = getAxisScore(status);
+  const journey = loadJourney();
+  const userWeights = journey.user?.axisWeights || { mental: 50, physical: 50, religious: 50 };
+  const maxScores = getAllAxisMaxScores(userWeights);
+
+  const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void, axisKey: 'mental' | 'physical' | 'religious') => {
+    const score = getAxisScore(status, maxScores[axisKey]);
     return (
       <button key={status} onClick={() => onSelect(status)}
         className={`w-full text-right p-4 rounded-xl border transition-all ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
         <div className="flex justify-between items-center">
-          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/10</span>
+          <span className="text-primary font-serif-display font-semibold">{score.finalScore}/{maxScores[axisKey].toFixed(1)}</span>
           <span className="text-foreground text-sm font-sans-ui">{STATUS_LABELS[status]}</span>
         </div>
       </button>
@@ -164,16 +170,17 @@ const DailyProgress = () => {
 
               {/* Steps 1-3: Axes */}
               {[1, 2, 3].includes(step) && (() => {
-                const axisKey = step === 1 ? 'mental' : step === 2 ? 'physical' : 'religious';
+                const axisKey = (step === 1 ? 'mental' : step === 2 ? 'physical' : 'religious') as 'mental' | 'physical' | 'religious';
                 const currentStatus = step === 1 ? mentalStatus : step === 2 ? physicalStatus : religiousStatus;
                 const setter = step === 1 ? setMentalStatus : step === 2 ? setPhysicalStatus : setReligiousStatus;
                 return (
                   <div>
                     <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {step}/3</p>
-                    <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">{AXIS_LABELS[axisKey]}</h2>
+                    <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-2 text-center">{AXIS_LABELS[axisKey]}</h2>
+                    <p className="text-accent text-xs text-center mb-4 font-sans-ui">الحد الأقصى: {maxScores[axisKey].toFixed(1)} نقطة (صعوبة {userWeights[axisKey]}%)</p>
                     <p className="text-muted-foreground text-sm mb-6 text-center">ما نسبة إتمامك لمهام هذا المحور اليوم؟</p>
                     <div className="space-y-3">
-                      {taskStatuses.map(s => renderStatusOption(s, currentStatus, (sel) => { setter(sel); setStep(step + 1); }))}
+                      {taskStatuses.map(s => renderStatusOption(s, currentStatus, (sel) => { setter(sel); setStep(step + 1); }, axisKey))}
                     </div>
                   </div>
                 );

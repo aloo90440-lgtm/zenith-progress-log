@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   loadJourney, getWeeklyLogs, getWeeklyScore, getWeeklyRating,
-  getAxisWeakness, getDistractionStats, getWeeklyNotes, AXIS_LABELS, JourneyData
+  getAxisWeakness, getDistractionStats, getWeeklyNotes, AXIS_LABELS, JourneyData, getAllAxisMaxScores
 } from "@/lib/store";
 import { Footprints, TrendingUp, BarChart3, FileText, AlertTriangle, BookOpen, ShieldAlert } from "lucide-react";
 
@@ -26,7 +26,9 @@ const WeeklyReport = () => {
   const distractionStats = getDistractionStats(data.logs);
   const notes = getWeeklyNotes(data.logs);
 
-  // Axis breakdown
+  // Axis breakdown with weighted max
+  const weights = data.user!.axisWeights;
+  const maxScores = getAllAxisMaxScores(weights);
   const axisTotals = { mental: 0, physical: 0, religious: 0 };
   const distractionTotal = weeklyLogs.reduce((s, l) => s + l.distraction.points, 0);
   for (const l of weeklyLogs) {
@@ -34,7 +36,7 @@ const WeeklyReport = () => {
     axisTotals.physical += l.axes.physical.finalScore;
     axisTotals.religious += l.axes.religious.finalScore;
   }
-  const maxAxisScore = weeklyLogs.length * 10;
+  const maxPerDay = { mental: maxScores.mental, physical: maxScores.physical, religious: maxScores.religious };
 
   return (
     <div className="min-h-screen gradient-desert px-6 py-8 pb-24" dir="rtl">
@@ -54,7 +56,7 @@ const WeeklyReport = () => {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               className="bg-card border border-border rounded-xl p-6 text-center shadow-sand">
               <p className="text-5xl font-serif-display font-bold text-foreground">{weeklyScore}</p>
-              <p className="text-muted-foreground text-sm font-sans-ui mt-1">من ٢٠٠ نقطة</p>
+              <p className="text-muted-foreground text-sm font-sans-ui mt-1">من {weeklyLogs.length * 40} نقطة</p>
               <p className={`text-lg font-serif-display font-semibold mt-2 ${rating.color}`}>{rating.label}</p>
             </motion.div>
 
@@ -62,24 +64,27 @@ const WeeklyReport = () => {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
               className="bg-card border border-border rounded-xl p-5 shadow-sand">
               <h3 className="text-sm font-sans-ui text-muted-foreground mb-4">أداء المحاور</h3>
-              {Object.entries(axisTotals).map(([key, total]) => (
-                <div key={key} className="mb-3 last:mb-0">
-                  <div className="flex justify-between text-sm font-sans-ui mb-1">
-                    <span className="text-foreground">{AXIS_LABELS[key]}</span>
-                    <span className="text-primary">{total}/{maxAxisScore}</span>
+              {(Object.entries(axisTotals) as Array<['mental' | 'physical' | 'religious', number]>).map(([key, total]) => {
+                const maxForAxis = weeklyLogs.length * maxPerDay[key];
+                return (
+                  <div key={key} className="mb-3 last:mb-0">
+                    <div className="flex justify-between text-sm font-sans-ui mb-1">
+                      <span className="text-foreground">{AXIS_LABELS[key]}</span>
+                      <span className="text-primary">{total.toFixed(1)}/{maxForAxis.toFixed(1)}</span>
+                    </div>
+                    <div className="h-2 bg-border rounded-full overflow-hidden">
+                      <div className="h-full bg-primary/70 rounded-full transition-all" style={{ width: `${maxForAxis > 0 ? (total / maxForAxis) * 100 : 0}%` }} />
+                    </div>
                   </div>
-                  <div className="h-2 bg-border rounded-full overflow-hidden">
-                    <div className="h-full bg-primary/70 rounded-full transition-all" style={{ width: `${maxAxisScore > 0 ? (total / maxAxisScore) * 100 : 0}%` }} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="mt-3">
                 <div className="flex justify-between text-sm font-sans-ui mb-1">
                   <span className="text-foreground">المشتتات</span>
-                  <span className="text-primary">{distractionTotal}/{maxAxisScore}</span>
+                  <span className="text-primary">{distractionTotal}/{weeklyLogs.length * 10}</span>
                 </div>
                 <div className="h-2 bg-border rounded-full overflow-hidden">
-                  <div className="h-full bg-accent/70 rounded-full transition-all" style={{ width: `${maxAxisScore > 0 ? (distractionTotal / maxAxisScore) * 100 : 0}%` }} />
+                  <div className="h-full bg-accent/70 rounded-full transition-all" style={{ width: `${weeklyLogs.length > 0 ? (distractionTotal / (weeklyLogs.length * 10)) * 100 : 0}%` }} />
                 </div>
               </div>
             </motion.div>

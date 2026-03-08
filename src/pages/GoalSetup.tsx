@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { saveUser, loadJourney } from "@/lib/store";
+import { saveUser, loadJourney, getAllAxisMaxScores } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -35,6 +35,19 @@ const GoalSetup = () => {
       }
       if (lines.length > 5) {
         setError("الحد الأقصى ٥ أسطر");
+        return false;
+      }
+      return true;
+    }
+    if (step === 2) {
+      const weights = [mentalWeight, physicalWeight, religiousWeight];
+      const count100 = weights.filter(w => w === 100).length;
+      if (count100 === 0) {
+        setError("يجب اختيار محور واحد بصعوبة 100%");
+        return false;
+      }
+      if (count100 > 1) {
+        setError("محور واحد فقط يمكن أن يكون 100%");
         return false;
       }
       return true;
@@ -137,26 +150,50 @@ const GoalSetup = () => {
           </div>
         )}
 
-        {step === 2 && (
-          <div className="space-y-8">
-            <p className="text-muted-foreground text-sm text-center mb-4">
-              حدد نسبة صعوبة كل محور (كلما زادت الصعوبة، زاد تأثيره على إحصائياتك)
-            </p>
-            {[
-              { label: "المحور الذهني", value: mentalWeight, setter: setMentalWeight },
-              { label: "المحور الجسدي", value: physicalWeight, setter: setPhysicalWeight },
-              { label: "المحور الديني", value: religiousWeight, setter: setReligiousWeight },
-            ].map(({ label, value, setter }) => (
-              <div key={label} className="bg-card border border-border rounded-xl p-5">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm font-sans-ui text-foreground">{label}</span>
-                  <span className="text-primary font-serif-display font-semibold text-lg">{value}%</span>
-                </div>
-                <Slider value={[value]} onValueChange={(v) => setter(v[0])} min={10} max={100} step={5} className="w-full" />
-              </div>
-            ))}
-          </div>
-        )}
+        {step === 2 && (() => {
+          const maxScores = getAllAxisMaxScores({ mental: mentalWeight, physical: physicalWeight, religious: religiousWeight });
+          const axisItems = [
+            { label: "المحور الذهني", value: mentalWeight, setter: setMentalWeight, key: 'mental' as const },
+            { label: "المحور الجسدي", value: physicalWeight, setter: setPhysicalWeight, key: 'physical' as const },
+            { label: "المحور الديني", value: religiousWeight, setter: setReligiousWeight, key: 'religious' as const },
+          ];
+          return (
+            <div className="space-y-8">
+              <p className="text-muted-foreground text-sm text-center mb-4">
+                حدد نسبة صعوبة كل محور — محور واحد فقط يمكن أن يكون 100%
+                <br />
+                <span className="text-primary text-xs">الـ 30 نقطة ستتوزع حسب نسب الصعوبة</span>
+              </p>
+              {axisItems.map(({ label, value, setter, key }) => {
+                const isLocked = value !== 100 && [mentalWeight, physicalWeight, religiousWeight].some((w, i) => w === 100 && ['mental', 'physical', 'religious'][i] !== key);
+                return (
+                  <div key={label} className="bg-card border border-border rounded-xl p-5">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-sans-ui text-foreground">{label}</span>
+                      <span className="text-primary font-serif-display font-semibold text-lg">{value}%</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[10px] text-muted-foreground font-sans-ui">الحد الأقصى للنقاط</span>
+                      <span className="text-xs text-accent font-sans-ui font-medium">{maxScores[key].toFixed(1)} نقطة</span>
+                    </div>
+                    <Slider
+                      value={[value]}
+                      onValueChange={(v) => {
+                        const newVal = v[0];
+                        if (newVal === 100 && isLocked) return; // block second 100%
+                        setter(newVal);
+                      }}
+                      min={10}
+                      max={100}
+                      step={5}
+                      className="w-full"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         <div className="flex gap-3 mt-8">
           {step > 0 && (
