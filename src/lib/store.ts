@@ -123,8 +123,8 @@ export function getAllAxisMaxScores(weights: { mental: number; physical: number;
 
 export function getAxisScore(status: TaskStatus, maxScore: number = 10): { baseScore: number; deduction: number; finalScore: number } {
   const multiplier = status === 'completed' ? 1 : status === 'minor_lack' ? 0.7 : status === 'major_lack' ? 0.3 : 0;
-  const finalScore = Math.round(maxScore * multiplier * 10) / 10;
-  return { baseScore: maxScore, deduction: Math.round((maxScore - finalScore) * 10) / 10, finalScore };
+  const finalScore = Math.round(maxScore * multiplier);
+  return { baseScore: maxScore, deduction: maxScore - finalScore, finalScore };
 }
 
 export function getDistractionScore(tier: DistractionTier): DistractionEntry {
