@@ -53,11 +53,13 @@ const DailyProgress = () => {
     if (!distraction || !mentalStatus || !physicalStatus || !religiousStatus) return;
 
     const data = loadJourney();
+    const weights = data.user!.axisWeights;
+    const maxScores = getAllAxisMaxScores(weights);
     const distractionEntry = getDistractionScore(distraction);
     const axes = {
-      mental: { ...getAxisScore(mentalStatus), status: mentalStatus } as AxisEntry,
-      physical: { ...getAxisScore(physicalStatus), status: physicalStatus } as AxisEntry,
-      religious: { ...getAxisScore(religiousStatus), status: religiousStatus } as AxisEntry,
+      mental: { ...getAxisScore(mentalStatus, maxScores.mental), status: mentalStatus } as AxisEntry,
+      physical: { ...getAxisScore(physicalStatus, maxScores.physical), status: physicalStatus } as AxisEntry,
+      religious: { ...getAxisScore(religiousStatus, maxScores.religious), status: religiousStatus } as AxisEntry,
     };
 
     const consecutive = checkConsecutiveDistraction(data.logs, getTodayStr());
