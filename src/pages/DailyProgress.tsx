@@ -403,6 +403,9 @@ const DailyProgress = () => {
                             >
                               عليك غدًا تعويض {recoveryResult.value} {recoveryResult.unit} من المهمة لاسترجاع النقاط والحفاظ على تقدم التزام قوي
                             </motion.p>
+                            <p className="text-center text-xs font-sans-ui text-muted-foreground mt-1">
+                              📋 سيتم سؤالك عن هذه المهمة غدًا في قسم <span className="font-bold text-foreground">المهام التعويضية</span>
+                            </p>
                           )}
                           <div className="flex gap-2">
                             <button
