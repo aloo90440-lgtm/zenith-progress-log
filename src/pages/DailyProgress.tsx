@@ -245,11 +245,40 @@ const DailyProgress = () => {
                      {distractionTiers.map(tier => {
                         const isActive = pendingSelection === `dist-${tier}`;
                         return (
-                          <button key={tier} tabIndex={-1} onClick={() => selectWithDelay(`dist-${tier}`, () => { setDistraction(tier); setStep(1); })}
+                          <button key={tier} tabIndex={-1} onClick={() => selectWithDelay(`dist-${tier}`, () => { 
+                            setDistraction(tier); 
+                            if (tier === 'none') {
+                              setDistractionType(null);
+                              setStep(mentalStep);
+                            } else {
+                              setStep(1);
+                            }
+                          })}
                             className={`w-full text-right p-4 rounded-xl border transition-all duration-200 outline-none ring-0 ${isActive ? 'border-primary bg-primary/15 scale-[1.03] shadow-sand' : distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30 active:scale-[0.98]'}`}>
                             <div className="flex items-center justify-center gap-2">
                               {isActive && <span className="text-primary text-lg">✓</span>}
                               <span className={`text-sm font-sans-ui ${isActive ? 'text-primary font-semibold' : 'text-foreground'}`}>{DISTRACTION_LABELS[tier]}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 1: Distraction Type (only if distraction !== none) */}
+              {step === 1 && hasDistractionTypeStep && (
+                <div>
+                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">ما نوع المشتت؟</h2>
+                   <div className="space-y-3">
+                     {distractionTypes.map(type => {
+                        const isActive = pendingSelection === `dtype-${type}`;
+                        return (
+                          <button key={type} tabIndex={-1} onClick={() => selectWithDelay(`dtype-${type}`, () => { setDistractionType(type); setStep(mentalStep); })}
+                            className={`w-full text-right p-4 rounded-xl border transition-all duration-200 outline-none ring-0 ${isActive ? 'border-primary bg-primary/15 scale-[1.03] shadow-sand' : distractionType === type ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30 active:scale-[0.98]'}`}>
+                            <div className="flex items-center justify-center gap-2">
+                              {isActive && <span className="text-primary text-lg">✓</span>}
+                              <span className={`text-sm font-sans-ui ${isActive ? 'text-primary font-semibold' : 'text-foreground'}`}>{DISTRACTION_TYPE_LABELS[type]}</span>
                             </div>
                           </button>
                         );
