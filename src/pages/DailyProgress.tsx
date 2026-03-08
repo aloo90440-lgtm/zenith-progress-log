@@ -376,7 +376,11 @@ const DailyProgress = () => {
                           {/* Task description input */}
                           <Input
                             type="text"
-                            placeholder="مثال: قراءة، ضغط، قرآن، أذكار..."
+                            placeholder={
+                              axisKey === 'mental' ? "مثال: مذاكرة، مراجعة، حل أسئلة، محاضرات..." :
+                              axisKey === 'physical' ? "مثال: ضغط، كارديو، مشي، تمرين..." :
+                              "مثال: قرآن، أذكار، علم شرعي، صلاة..."
+                            }
                             value={recoveryTaskDesc}
                             onChange={(e) => {
                               const val = e.target.value;
