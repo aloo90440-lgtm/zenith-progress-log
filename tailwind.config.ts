@@ -51,20 +51,20 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        sand: {
-          DEFAULT: "hsl(var(--sand-bronze))",
+        "islamic-green": {
+          DEFAULT: "hsl(var(--islamic-green))",
         },
-        desert: {
-          DEFAULT: "hsl(var(--desert-shadow))",
+        gold: {
+          DEFAULT: "hsl(var(--islamic-gold))",
         },
-        olive: {
-          DEFAULT: "hsl(var(--faded-olive))",
+        cream: {
+          DEFAULT: "hsl(var(--warm-cream))",
         },
-        dust: {
-          DEFAULT: "hsl(var(--dust-storm))",
+        forest: {
+          DEFAULT: "hsl(var(--deep-forest))",
         },
-        night: {
-          DEFAULT: "hsl(var(--night-cloak))",
+        sage: {
+          DEFAULT: "hsl(var(--soft-sage))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
