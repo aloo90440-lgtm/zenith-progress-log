@@ -38,29 +38,32 @@ const DailyProgress = () => {
     pointsLost: number;
   } | null>(null);
   const [recoveryInput, setRecoveryInput] = useState("");
-  const [recoveryTaskType, setRecoveryTaskType] = useState<string>("");
+  const [recoveryTaskDesc, setRecoveryTaskDesc] = useState("");
+  const [recoveryDetectedUnit, setRecoveryDetectedUnit] = useState<{ unit: string; unitLabel: string } | null>(null);
   const [recoveryResult, setRecoveryResult] = useState<{ value: number; unit: string } | null>(null);
 
-  // Axis-specific task types with units
-  const axisTaskTypes: Record<string, { label: string; unit: string; unitLabel: string }[]> = {
-    mental: [
-      { label: "قراءة (صفحات)", unit: "pages", unitLabel: "صفحة" },
-      { label: "قراءة (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-      { label: "حل أسئلة", unit: "questions", unitLabel: "سؤال" },
-      { label: "مراجعة (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-    ],
-    physical: [
-      { label: "تمرين ضغط (عدّات)", unit: "reps", unitLabel: "عدّة" },
-      { label: "تمرين (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-      { label: "جري / مشي (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-      { label: "تمرين سكوات (عدّات)", unit: "reps", unitLabel: "عدّة" },
-    ],
-    religious: [
-      { label: "قرآن (صفحات)", unit: "pages", unitLabel: "صفحة" },
-      { label: "قرآن (آيات)", unit: "ayat", unitLabel: "آية" },
-      { label: "أذكار (عدد)", unit: "count", unitLabel: "ذِكر" },
-      { label: "سماع قرآن (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
-    ],
+  // Smart unit detection from task description keywords
+  const detectUnitFromTask = (text: string): { unit: string; unitLabel: string } | null => {
+    const t = text.trim().toLowerCase();
+    // Pages
+    if (/صفح|قراءة|قرا|كتاب|مذاكر|مراجع|ورق/.test(t)) return { unit: "pages", unitLabel: "صفحة" };
+    // Questions
+    if (/سؤال|اسئل|أسئل|حل|مسأل|مسائل|تمارين ذهن/.test(t)) return { unit: "questions", unitLabel: "سؤال" };
+    // Reps (exercise)
+    if (/ضغط|سكوات|عقل|بطن|تمرين|عدات|عدّات|بلانك|pull|push/.test(t)) return { unit: "reps", unitLabel: "عدّة" };
+    // Quran ayat
+    if (/آي[اة]|ايات|آيات/.test(t)) return { unit: "ayat", unitLabel: "آية" };
+    // Quran pages
+    if (/قرآن|قران|حفظ|تلاو/.test(t)) return { unit: "pages", unitLabel: "صفحة" };
+    // Athkar
+    if (/ذكر|أذكار|اذكار|استغفار|تسبيح|صلاة على/.test(t)) return { unit: "count", unitLabel: "ذِكر" };
+    // Running/walking
+    if (/جري|مشي|سباح|ركض/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
+    // Listen
+    if (/سماع|استماع|بودكاست|محاضر/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
+    // Generic time
+    if (/دقيق|وقت|ساع|زمن/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
+    return null;
   };
 
   useEffect(() => {
