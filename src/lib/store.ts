@@ -89,8 +89,8 @@ export function saveUser(user: UserProfile) {
 /** Calculate the max points an axis can earn based on its weight proportion of 30 total points */
 export function getAxisMaxScore(weights: { mental: number; physical: number; religious: number }, axis: 'mental' | 'physical' | 'religious'): number {
   const totalWeight = weights.mental + weights.physical + weights.religious;
-  if (totalWeight === 0) return 10;
-  return Math.round((weights[axis] / totalWeight) * 30 * 100) / 100;
+  if (totalWeight === 0) return { mental: 10, physical: 10, religious: 10 };
+  return Math.round((weights[axis] / totalWeight) * 30);
 }
 
 /** Get all three axis max scores */
