@@ -104,7 +104,7 @@ const GoalSetup = () => {
   const steps = [
     { title: "من أنت؟", subtitle: "بياناتك الشخصية" },
     { title: "ما هدفك؟", subtitle: "حدد رحلتك" },
-    { title: "أوزان المحاور", subtitle: "حدد صعوبة كل محور" },
+    { title: "صعوبة المحاور", subtitle: "حدد صعوبة كل محور" },
   ];
 
   if (loading) return <div className="min-h-screen gradient-desert flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
