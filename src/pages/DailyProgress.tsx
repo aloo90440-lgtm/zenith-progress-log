@@ -38,8 +38,30 @@ const DailyProgress = () => {
     pointsLost: number;
   } | null>(null);
   const [recoveryInput, setRecoveryInput] = useState("");
-  const [recoveryUnit, setRecoveryUnit] = useState<'pages' | 'questions' | 'minutes' | 'hours'>('minutes');
+  const [recoveryTaskType, setRecoveryTaskType] = useState<string>("");
   const [recoveryResult, setRecoveryResult] = useState<{ value: number; unit: string } | null>(null);
+
+  // Axis-specific task types with units
+  const axisTaskTypes: Record<string, { label: string; unit: string; unitLabel: string }[]> = {
+    mental: [
+      { label: "قراءة (صفحات)", unit: "pages", unitLabel: "صفحة" },
+      { label: "قراءة (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+      { label: "حل أسئلة", unit: "questions", unitLabel: "سؤال" },
+      { label: "مراجعة (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+    ],
+    physical: [
+      { label: "تمرين ضغط (عدّات)", unit: "reps", unitLabel: "عدّة" },
+      { label: "تمرين (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+      { label: "جري / مشي (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+      { label: "تمرين سكوات (عدّات)", unit: "reps", unitLabel: "عدّة" },
+    ],
+    religious: [
+      { label: "قرآن (صفحات)", unit: "pages", unitLabel: "صفحة" },
+      { label: "قرآن (آيات)", unit: "ayat", unitLabel: "آية" },
+      { label: "أذكار (عدد)", unit: "count", unitLabel: "ذِكر" },
+      { label: "سماع قرآن (دقائق)", unit: "minutes", unitLabel: "دقيقة" },
+    ],
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -309,6 +331,7 @@ const DailyProgress = () => {
                     const score = getAxisScore(sel, maxScores[axisKey]);
                     setRecoveryModal({ axisKey, status: sel, pointsLost: score.deduction });
                     setRecoveryInput("");
+                    setRecoveryTaskType("");
                     setRecoveryResult(null);
                   } else {
                     setStep(step + 1);
@@ -344,56 +367,59 @@ const DailyProgress = () => {
                             يمكنك تعويض النقاط في اليوم التالي
                           </p>
                           <p className="text-foreground text-sm text-center font-sans-ui font-bold">
-                            فقط اكتب لي كمية / وقت المهمة وسأقوم بحساب نسبة التعويض منها في اليوم التالي
+                            اختر نوع المهمة التعويضية ثم أدخل الكمية
                           </p>
-                          <div className="flex gap-2 items-center">
-                            <Input
-                              type="number"
-                              placeholder="الكمية أو الوقت"
-                              value={recoveryInput}
-                              onChange={(e) => {
-                                setRecoveryInput(e.target.value);
-                                const val = parseFloat(e.target.value);
-                                if (!isNaN(val) && val > 0) {
-                                  const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
-                                  // Convert hours to minutes for calculation
-                                  const effectiveVal = recoveryUnit === 'hours' ? val * 60 : val;
-                                  const result = Math.round(effectiveVal * pct * 100) / 100;
-                                  const unitLabels = { pages: 'صفحة', questions: 'سؤال', minutes: 'دقيقة', hours: 'دقيقة' };
-                                  setRecoveryResult({ value: result, unit: unitLabels[recoveryUnit] });
-                                } else {
+                          {/* Task type buttons */}
+                          <div className="grid grid-cols-2 gap-2">
+                            {axisTaskTypes[recoveryModal.axisKey]?.map((taskType) => (
+                              <button
+                                key={taskType.label}
+                                onClick={() => {
+                                  setRecoveryTaskType(taskType.label);
+                                  setRecoveryInput("");
                                   setRecoveryResult(null);
-                                }
-                              }}
-                              className="text-center text-lg flex-1"
-                              dir="rtl"
-                            />
-                            <select
-                              value={recoveryUnit}
-                              onChange={(e) => {
-                                const newUnit = e.target.value as typeof recoveryUnit;
-                                setRecoveryUnit(newUnit);
-                                const val = parseFloat(recoveryInput);
-                                if (!isNaN(val) && val > 0) {
-                                  const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
-                                  const effectiveVal = newUnit === 'hours' ? val * 60 : val;
-                                  const result = Math.round(effectiveVal * pct * 100) / 100;
-                                  const unitLabels = { pages: 'صفحة', questions: 'سؤال', minutes: 'دقيقة', hours: 'دقيقة' };
-                                  setRecoveryResult({ value: result, unit: unitLabels[newUnit] });
-                                }
-                              }}
-                              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm font-sans-ui"
-                              dir="rtl"
-                            >
-                              <option value="minutes">دقيقة</option>
-                              <option value="hours">ساعة</option>
-                              <option value="pages">صفحة</option>
-                              <option value="questions">سؤال</option>
-                            </select>
+                                }}
+                                className={`p-2.5 rounded-lg border text-xs font-sans-ui transition-all ${
+                                  recoveryTaskType === taskType.label
+                                    ? 'border-primary bg-primary/15 text-primary font-semibold'
+                                    : 'border-border bg-background hover:border-primary/30 text-foreground'
+                                }`}
+                              >
+                                {taskType.label}
+                              </button>
+                            ))}
                           </div>
-                          <p className="text-muted-foreground text-xs text-center font-sans-ui">
-                            مثال: 40 صفحة، 10 أسئلة، 30 دقيقة، أو نصف ساعة (0.5 ساعة)
-                          </p>
+
+                          {/* Input appears after selecting task type */}
+                          {recoveryTaskType && (() => {
+                            const selectedTask = axisTaskTypes[recoveryModal.axisKey]?.find(t => t.label === recoveryTaskType);
+                            if (!selectedTask) return null;
+                            return (
+                              <div className="flex gap-2 items-center">
+                                <Input
+                                  type="number"
+                                  placeholder={`أدخل عدد ${selectedTask.unitLabel}`}
+                                  value={recoveryInput}
+                                  onChange={(e) => {
+                                    setRecoveryInput(e.target.value);
+                                    const val = parseFloat(e.target.value);
+                                    if (!isNaN(val) && val > 0) {
+                                      const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
+                                      const result = Math.round(val * pct * 100) / 100;
+                                      setRecoveryResult({ value: result, unit: selectedTask.unitLabel });
+                                    } else {
+                                      setRecoveryResult(null);
+                                    }
+                                  }}
+                                  className="text-center text-lg flex-1"
+                                  dir="rtl"
+                                />
+                                <span className="text-sm font-sans-ui text-muted-foreground whitespace-nowrap">
+                                  {selectedTask.unitLabel}
+                                </span>
+                              </div>
+                            );
+                          })()}
                           {recoveryResult !== null && (
                             <>
                               <motion.p
