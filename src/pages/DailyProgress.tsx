@@ -12,7 +12,8 @@ import {
   markTaskCompleted, generateAndSaveAppendedTasks, checkConsecutiveDistractionDb,
   DbProfile, DbAppendedTask,
 } from "@/lib/supabase-store";
-import { Footprints, TrendingUp, BarChart3, FileText, CheckCircle2, XCircle } from "lucide-react";
+import { Footprints, TrendingUp, BarChart3, FileText, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const DailyProgress = () => {
   const navigate = useNavigate();
