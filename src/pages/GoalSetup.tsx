@@ -28,8 +28,13 @@ const GoalSetup = () => {
     }
     if (step === 1) {
       if (!goal.trim()) { setError("الهدف مطلوب"); return false; }
-      if (importance.trim().split('\n').length < 5) {
-        setError("اكتب على الأقل ٥ أسطر عن أهمية هدفك");
+      const lines = importance.trim().split('\n').filter(l => l.trim().length > 0);
+      if (lines.length < 2) {
+        setError("اكتب على الأقل سطرين عن أهمية هدفك");
+        return false;
+      }
+      if (lines.length > 5) {
+        setError("الحد الأقصى ٥ أسطر");
         return false;
       }
       return true;
@@ -121,7 +126,7 @@ const GoalSetup = () => {
               <Input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="مثال: حفظ القرآن كاملاً" className="bg-card border-border text-foreground placeholder:text-muted-foreground/50" required />
             </div>
             <div>
-              <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">لماذا هذا الهدف مهم؟ * (٥ أسطر على الأقل)</label>
+              <label className="block text-sm text-muted-foreground mb-2 font-sans-ui">لماذا هذا الهدف مهم؟ * (٢ إلى ٥ أسطر)</label>
               <Textarea
                 value={importance}
                 onChange={(e) => setImportance(e.target.value)}
