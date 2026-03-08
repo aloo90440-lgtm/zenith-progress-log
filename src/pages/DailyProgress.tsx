@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   loadJourney, saveDailyLog, getTodayStr, getMotivationalMessage,
   getAxisScore, getDistractionScore, checkConsecutiveDistraction,
-  calculateDailyTotal, getPendingAppendedTasks,
+  calculateDailyTotal, getPendingAppendedTasks, getAllAxisMaxScores,
   TaskStatus, DistractionTier, AxisEntry, AppendedTask,
   AXIS_LABELS, STATUS_LABELS, DISTRACTION_LABELS,
 } from "@/lib/store";
