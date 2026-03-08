@@ -287,14 +287,15 @@ const DailyProgress = () => {
                 </div>
               )}
 
-              {/* Steps 1-3: Axes */}
-              {[1, 2, 3].includes(step) && (() => {
-                const axisKey = (step === 1 ? 'mental' : step === 2 ? 'physical' : 'religious') as 'mental' | 'physical' | 'religious';
-                const currentStatus = step === 1 ? mentalStatus : step === 2 ? physicalStatus : religiousStatus;
-                const setter = step === 1 ? setMentalStatus : step === 2 ? setPhysicalStatus : setReligiousStatus;
+              {/* Axes steps */}
+              {[mentalStep, physicalStep, religiousStep].includes(step) && (() => {
+                const axisIndex = step === mentalStep ? 0 : step === physicalStep ? 1 : 2;
+                const axisKey = (['mental', 'physical', 'religious'] as const)[axisIndex];
+                const currentStatus = axisIndex === 0 ? mentalStatus : axisIndex === 1 ? physicalStatus : religiousStatus;
+                const setter = axisIndex === 0 ? setMentalStatus : axisIndex === 1 ? setPhysicalStatus : setReligiousStatus;
                 return (
                   <div>
-                    <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {step}/3</p>
+                    <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {axisIndex + 1}/3</p>
                     <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-2 text-center">{AXIS_LABELS[axisKey]}</h2>
                     
                     <p className="text-muted-foreground text-sm mb-6 text-center">ما نسبة إتمامك لمهام هذا المحور اليوم؟</p>
