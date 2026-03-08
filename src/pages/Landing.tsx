@@ -1,6 +1,14 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { loadJourney } from "@/lib/store";
+
+// One-time data reset flag
+const RESET_KEY = 'the-journey-reset-v1';
+if (!localStorage.getItem(RESET_KEY)) {
+  localStorage.removeItem('the-journey-v2');
+  localStorage.setItem(RESET_KEY, 'done');
+}
 
 const Landing = () => {
   const navigate = useNavigate();
