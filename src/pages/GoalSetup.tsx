@@ -28,8 +28,13 @@ const GoalSetup = () => {
     }
     if (step === 1) {
       if (!goal.trim()) { setError("الهدف مطلوب"); return false; }
-      if (importance.trim().split('\n').length < 5) {
-        setError("اكتب على الأقل ٥ أسطر عن أهمية هدفك");
+      const lines = importance.trim().split('\n').filter(l => l.trim().length > 0);
+      if (lines.length < 2) {
+        setError("اكتب على الأقل سطرين عن أهمية هدفك");
+        return false;
+      }
+      if (lines.length > 5) {
+        setError("الحد الأقصى ٥ أسطر");
         return false;
       }
       return true;
