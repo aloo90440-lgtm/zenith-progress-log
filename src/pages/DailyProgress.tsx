@@ -348,7 +348,7 @@ const DailyProgress = () => {
               )}
 
               {/* Note step */}
-              {step === (hasAppendedStep ? 5 : 4) && (
+              {step === noteStep && (
                 <div>
                   <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">تأمل</p>
                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">ما أهم شيء تعلمته اليوم؟</h2>
