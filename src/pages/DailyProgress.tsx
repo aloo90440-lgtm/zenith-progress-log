@@ -173,24 +173,20 @@ const DailyProgress = () => {
               {/* Step 0: Distractions */}
               {step === 0 && (
                 <div>
-                  <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">الأولوية</p>
-                  <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">هل عرضت نفسك لمشتتات اليوم؟</h2>
-                  <div className="space-y-3">
-                    {distractionTiers.map(tier => {
-                      const info = getDistractionScore(tier);
-                      return (
-                        <button key={tier} onClick={() => { setDistraction(tier); setStep(1); }}
-                          className={`w-full text-right p-4 rounded-xl border transition-all ${distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
-                          <div className="flex justify-between items-center">
-                            <div className="text-left">
-                              <span className="text-primary font-serif-display font-semibold">{info.points}/10</span>
-                              {info.istighfarMinutes > 0 && <p className="text-accent text-[10px]">+ {info.istighfarMinutes} دقيقة استغفار</p>}
-                            </div>
-                            <span className="text-foreground text-sm font-sans-ui">{DISTRACTION_LABELS[tier]}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
+                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">هل عرضت نفسك لمشتتات اليوم؟</h2>
+                   <div className="space-y-3">
+                     {distractionTiers.map(tier => {
+                       const info = getDistractionScore(tier);
+                       return (
+                         <button key={tier} onClick={() => { setDistraction(tier); setStep(1); }}
+                           className={`w-full text-right p-4 rounded-xl border transition-all ${distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
+                           <div className="flex items-center justify-center">
+                             <span className="text-foreground text-sm font-sans-ui">{DISTRACTION_LABELS[tier]}</span>
+                             {info.istighfarMinutes > 0 && <span className="text-accent text-[10px] mr-2">+ {info.istighfarMinutes} دقيقة استغفار</span>}
+                           </div>
+                         </button>
+                       );
+                     })}
                   </div>
                 </div>
               )}
