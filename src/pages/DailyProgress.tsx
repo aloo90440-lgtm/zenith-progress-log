@@ -301,6 +301,19 @@ const DailyProgress = () => {
                 const axisKey = (['mental', 'physical', 'religious'] as const)[axisIndex];
                 const currentStatus = axisIndex === 0 ? mentalStatus : axisIndex === 1 ? physicalStatus : religiousStatus;
                 const setter = axisIndex === 0 ? setMentalStatus : axisIndex === 1 ? setPhysicalStatus : setReligiousStatus;
+                
+                const handleAxisSelect = (sel: TaskStatus) => {
+                  setter(sel);
+                  if (sel === 'minor_lack' || sel === 'major_lack') {
+                    const score = getAxisScore(sel, maxScores[axisKey]);
+                    setRecoveryModal({ axisKey, status: sel, pointsLost: score.deduction });
+                    setRecoveryInput("");
+                    setRecoveryResult(null);
+                  } else {
+                    setStep(step + 1);
+                  }
+                };
+
                 return (
                   <div>
                     <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {axisIndex + 1}/3</p>
@@ -308,8 +321,69 @@ const DailyProgress = () => {
                     
                     <p className="text-muted-foreground text-sm mb-6 text-center">ما نسبة إتمامك لمهام هذا المحور اليوم؟</p>
                     <div className="space-y-3">
-                      {taskStatuses.map(s => renderStatusOption(s, currentStatus, (sel) => { setter(sel); setStep(step + 1); }, axisKey))}
+                      {taskStatuses.map(s => renderStatusOption(s, currentStatus, handleAxisSelect, axisKey))}
                     </div>
+
+                    {/* Recovery Modal */}
+                    <AnimatePresence>
+                      {recoveryModal && recoveryModal.axisKey === axisKey && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="mt-6 bg-card border border-destructive/30 rounded-xl p-5 space-y-4"
+                        >
+                          <div className="flex items-center justify-center gap-2 text-destructive">
+                            <AlertTriangle className="w-5 h-5" />
+                            <p className="text-sm font-sans-ui font-semibold">
+                              لقد خسرت {recoveryModal.pointsLost} نقطة بسبب {STATUS_LABELS[recoveryModal.status]}
+                            </p>
+                          </div>
+                          <p className="text-muted-foreground text-sm text-center font-sans-ui">
+                            يمكنك تعويض النقاط في اليوم التالي
+                          </p>
+                          <p className="text-foreground text-sm text-center font-sans-ui font-bold">
+                            فقط اكتب لي كمية / وقت المهمة وسأقوم بحساب نسبة التعويض منها في اليوم التالي
+                          </p>
+                          <Input
+                            type="number"
+                            placeholder="مثال: 30 (دقيقة أو عدد)"
+                            value={recoveryInput}
+                            onChange={(e) => {
+                              setRecoveryInput(e.target.value);
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val) && val > 0) {
+                                const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
+                                setRecoveryResult(Math.round(val * pct * 100) / 100);
+                              } else {
+                                setRecoveryResult(null);
+                              }
+                            }}
+                            className="text-center text-lg"
+                            dir="rtl"
+                          />
+                          {recoveryResult !== null && (
+                            <motion.p
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="text-center text-sm font-sans-ui font-bold"
+                              style={{ color: '#8B0000' }}
+                            >
+                              عليك غدًا تعويض {recoveryResult} من المهمة لاسترجاع النقاط والحفاظ على تقدم التزام قوي
+                            </motion.p>
+                          )}
+                          <button
+                            onClick={() => {
+                              setRecoveryModal(null);
+                              setStep(step + 1);
+                            }}
+                            className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-3 rounded-lg hover:opacity-90 transition-opacity"
+                          >
+                            متابعة
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })()}
