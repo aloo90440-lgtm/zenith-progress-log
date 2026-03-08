@@ -40,7 +40,11 @@ const DailyProgress = () => {
       const pending = await getPendingAppendedTasksDb(getTodayStr());
       setPendingTasks(pending);
 
-      // Don't pre-fill selections so the form starts fresh each visit
+      // Load saved data for daily note only (not selections, to keep form fresh)
+      const todayLog = await getTodayLog();
+      if (todayLog) {
+        setDailyNote(todayLog.daily_note);
+      }
 
       setLoading(false);
     };
