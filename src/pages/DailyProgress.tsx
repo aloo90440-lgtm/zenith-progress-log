@@ -371,59 +371,66 @@ const DailyProgress = () => {
                             يمكنك تعويض النقاط في اليوم التالي
                           </p>
                           <p className="text-foreground text-sm text-center font-sans-ui font-bold">
-                            اختر نوع المهمة التعويضية ثم أدخل الكمية
+                            اكتب المهمة التي ستعوض بها وسأحدد الوحدة تلقائيًا
                           </p>
-                          {/* Task type buttons */}
-                          <div className="grid grid-cols-2 gap-2">
-                            {axisTaskTypes[recoveryModal.axisKey]?.map((taskType) => (
-                              <button
-                                key={taskType.label}
-                                onClick={() => {
-                                  setRecoveryTaskType(taskType.label);
-                                  setRecoveryInput("");
-                                  setRecoveryResult(null);
-                                }}
-                                className={`p-2.5 rounded-lg border text-xs font-sans-ui transition-all ${
-                                  recoveryTaskType === taskType.label
-                                    ? 'border-primary bg-primary/15 text-primary font-semibold'
-                                    : 'border-border bg-background hover:border-primary/30 text-foreground'
-                                }`}
-                              >
-                                {taskType.label}
-                              </button>
-                            ))}
-                          </div>
+                          {/* Task description input */}
+                          <Input
+                            type="text"
+                            placeholder="مثال: قراءة، ضغط، قرآن، أذكار..."
+                            value={recoveryTaskDesc}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setRecoveryTaskDesc(val);
+                              const detected = detectUnitFromTask(val);
+                              setRecoveryDetectedUnit(detected);
+                              setRecoveryInput("");
+                              setRecoveryResult(null);
+                            }}
+                            className="text-center text-base"
+                            dir="rtl"
+                          />
 
-                          {/* Input appears after selecting task type */}
-                          {recoveryTaskType && (() => {
-                            const selectedTask = axisTaskTypes[recoveryModal.axisKey]?.find(t => t.label === recoveryTaskType);
-                            if (!selectedTask) return null;
-                            return (
-                              <div className="flex gap-2 items-center">
-                                <Input
-                                  type="number"
-                                  placeholder={`أدخل عدد ${selectedTask.unitLabel}`}
-                                  value={recoveryInput}
-                                  onChange={(e) => {
-                                    setRecoveryInput(e.target.value);
-                                    const val = parseFloat(e.target.value);
-                                    if (!isNaN(val) && val > 0) {
-                                      const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
-                                      const result = Math.round(val * pct * 100) / 100;
-                                      setRecoveryResult({ value: result, unit: selectedTask.unitLabel });
-                                    } else {
-                                      setRecoveryResult(null);
-                                    }
-                                  }}
-                                  className="text-center text-lg flex-1"
-                                  dir="rtl"
-                                />
-                                <span className="text-sm font-sans-ui text-muted-foreground whitespace-nowrap">
-                                  {selectedTask.unitLabel}
-                                </span>
-                              </div>
-                            );
-                          })()}
+                          {/* Detected unit badge */}
+                          {recoveryDetectedUnit && (
+                            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+                              <span className="inline-block bg-primary/10 text-primary text-xs font-sans-ui px-3 py-1.5 rounded-full">
+                                ✓ الوحدة: {recoveryDetectedUnit.unitLabel}
+                              </span>
+                            </motion.div>
+                          )}
+
+                          {recoveryTaskDesc && !recoveryDetectedUnit && (
+                            <p className="text-xs text-muted-foreground text-center font-sans-ui">
+                              لم أتعرف على نوع المهمة، جرّب كلمات مثل: قراءة، ضغط، قرآن، أذكار، جري...
+                            </p>
+                          )}
+
+                          {/* Quantity input appears after detection */}
+                          {recoveryDetectedUnit && (
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2 items-center">
+                              <Input
+                                type="number"
+                                placeholder={`كم ${recoveryDetectedUnit.unitLabel}؟`}
+                                value={recoveryInput}
+                                onChange={(e) => {
+                                  setRecoveryInput(e.target.value);
+                                  const num = parseFloat(e.target.value);
+                                  if (!isNaN(num) && num > 0 && recoveryDetectedUnit) {
+                                    const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
+                                    const result = Math.round(num * pct * 100) / 100;
+                                    setRecoveryResult({ value: result, unit: recoveryDetectedUnit.unitLabel });
+                                  } else {
+                                    setRecoveryResult(null);
+                                  }
+                                }}
+                                className="text-center text-lg flex-1"
+                                dir="rtl"
+                              />
+                              <span className="text-sm font-sans-ui text-muted-foreground whitespace-nowrap">
+                                {recoveryDetectedUnit.unitLabel}
+                              </span>
+                            </motion.div>
+                          )}
                           {recoveryResult !== null && (
                             <>
                               <motion.p
