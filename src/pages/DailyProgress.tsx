@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   getAxisScore, getDistractionScore, calculateDailyTotal,
   getAllAxisMaxScores, getMotivationalMessage, getTodayStr,
-  TaskStatus, DistractionTier,
-  AXIS_LABELS, STATUS_LABELS, DISTRACTION_LABELS,
+  TaskStatus, DistractionTier, DistractionType,
+  AXIS_LABELS, STATUS_LABELS, DISTRACTION_LABELS, DISTRACTION_TYPE_LABELS,
 } from "@/lib/store";
 import {
   getProfile, getTodayLog, saveDailyLogDb, getPendingAppendedTasksDb,
