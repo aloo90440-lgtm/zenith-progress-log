@@ -70,7 +70,7 @@ const WeeklyReport = () => {
                   <div key={key} className="mb-3 last:mb-0">
                     <div className="flex justify-between text-sm font-sans-ui mb-1">
                       <span className="text-foreground">{AXIS_LABELS[key]}</span>
-                      <span className="text-primary">{total.toFixed(1)}/{maxForAxis.toFixed(1)}</span>
+                      <span className="text-primary">{total}/{maxForAxis}</span>
                     </div>
                     <div className="h-2 bg-border rounded-full overflow-hidden">
                       <div className="h-full bg-primary/70 rounded-full transition-all" style={{ width: `${maxForAxis > 0 ? (total / maxForAxis) * 100 : 0}%` }} />

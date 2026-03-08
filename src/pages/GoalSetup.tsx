@@ -174,7 +174,7 @@ const GoalSetup = () => {
                     </div>
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-[10px] text-muted-foreground font-sans-ui">الحد الأقصى للنقاط</span>
-                      <span className="text-xs text-accent font-sans-ui font-medium">{maxScores[key].toFixed(1)} نقطة</span>
+                      <span className="text-xs text-accent font-sans-ui font-medium">{maxScores[key]} نقطة</span>
                     </div>
                     <Slider
                       value={[value]}
