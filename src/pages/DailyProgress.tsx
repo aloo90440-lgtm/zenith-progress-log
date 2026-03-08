@@ -124,8 +124,8 @@ const DailyProgress = () => {
   const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void, axisKey: 'mental' | 'physical' | 'religious') => {
     const score = getAxisScore(status, maxScores[axisKey]);
     return (
-      <button key={status} onClick={() => onSelect(status)}
-        className={`w-full text-right p-4 rounded-xl border transition-all ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
+      <button key={status} onClick={(e) => { (e.target as HTMLElement).blur(); onSelect(status); }}
+        className={`w-full text-right p-4 rounded-xl border transition-all focus:outline-none ${selected === status ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30'}`}>
         <div className="flex items-center justify-center">
           <span className="text-foreground text-sm font-sans-ui">{STATUS_LABELS[status]}</span>
         </div>
