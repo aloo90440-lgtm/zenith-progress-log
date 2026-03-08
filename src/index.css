@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=Amiri:wght@400;700&family=Cairo:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -59,7 +59,8 @@
   }
 
   html {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Cairo', 'Inter', sans-serif;
+    direction: rtl;
   }
 
   body {
@@ -67,16 +68,23 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Amiri', 'Playfair Display', serif;
+    font-weight: 700;
   }
 }
 
 @layer utilities {
   .font-serif-display {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Amiri', 'Playfair Display', serif;
   }
   .font-sans-ui {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Cairo', 'Inter', sans-serif;
+  }
+  .font-arabic-heading {
+    font-family: 'Amiri', serif;
+  }
+  .font-arabic-body {
+    font-family: 'Cairo', sans-serif;
   }
   .gradient-sand {
     background: linear-gradient(135deg, hsl(33, 38%, 61%), hsl(30, 14%, 47%));
