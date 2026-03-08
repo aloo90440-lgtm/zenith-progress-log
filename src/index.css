@@ -6,50 +6,50 @@
 
 @layer base {
   :root {
-    --background: 36 20% 8%;
-    --foreground: 36 30% 88%;
+    --background: 40 30% 95%;
+    --foreground: 150 25% 15%;
 
-    --card: 36 15% 12%;
-    --card-foreground: 36 30% 88%;
+    --card: 40 25% 98%;
+    --card-foreground: 150 25% 15%;
 
-    --popover: 36 15% 12%;
-    --popover-foreground: 36 30% 88%;
+    --popover: 40 25% 98%;
+    --popover-foreground: 150 25% 15%;
 
-    --primary: 33 38% 61%;
-    --primary-foreground: 36 20% 8%;
+    --primary: 155 35% 28%;
+    --primary-foreground: 40 30% 95%;
 
-    --secondary: 30 18% 31%;
-    --secondary-foreground: 36 30% 88%;
+    --secondary: 40 20% 88%;
+    --secondary-foreground: 150 25% 15%;
 
-    --muted: 36 10% 16%;
-    --muted-foreground: 36 15% 55%;
+    --muted: 40 15% 90%;
+    --muted-foreground: 150 10% 45%;
 
-    --accent: 72 16% 38%;
-    --accent-foreground: 36 30% 88%;
+    --accent: 43 65% 52%;
+    --accent-foreground: 150 25% 15%;
 
-    --destructive: 0 62% 40%;
+    --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 36 12% 20%;
-    --input: 36 12% 20%;
-    --ring: 33 38% 61%;
+    --border: 40 18% 84%;
+    --input: 40 18% 84%;
+    --ring: 155 35% 28%;
 
     --radius: 0.75rem;
 
-    --sand-bronze: 33 38% 61%;
-    --desert-shadow: 20 18% 31%;
-    --faded-olive: 72 16% 38%;
-    --dust-storm: 30 14% 47%;
-    --night-cloak: 40 12% 11%;
+    --islamic-green: 155 35% 28%;
+    --islamic-gold: 43 65% 52%;
+    --warm-cream: 40 30% 95%;
+    --deep-forest: 155 40% 18%;
+    --soft-sage: 145 15% 70%;
 
-    --sidebar-background: 36 15% 10%;
-    --sidebar-foreground: 36 30% 88%;
-    --sidebar-primary: 33 38% 61%;
-    --sidebar-primary-foreground: 36 20% 8%;
-    --sidebar-accent: 36 10% 16%;
-    --sidebar-accent-foreground: 36 30% 88%;
-    --sidebar-border: 36 12% 20%;
-    --sidebar-ring: 33 38% 61%;
+    --sidebar-background: 40 25% 97%;
+    --sidebar-foreground: 150 25% 15%;
+    --sidebar-primary: 155 35% 28%;
+    --sidebar-primary-foreground: 40 30% 95%;
+    --sidebar-accent: 40 15% 90%;
+    --sidebar-accent-foreground: 150 25% 15%;
+    --sidebar-border: 40 18% 84%;
+    --sidebar-ring: 155 35% 28%;
   }
 }
 
@@ -87,28 +87,28 @@
     font-family: 'Cairo', sans-serif;
   }
   .gradient-sand {
-    background: linear-gradient(135deg, hsl(33, 38%, 61%), hsl(30, 14%, 47%));
+    background: linear-gradient(135deg, hsl(155, 35%, 28%), hsl(155, 40%, 22%));
   }
   .gradient-night {
-    background: linear-gradient(180deg, hsl(40, 12%, 11%), hsl(36, 20%, 8%));
+    background: linear-gradient(180deg, hsl(155, 40%, 18%), hsl(150, 25%, 15%));
   }
   .gradient-desert {
-    background: linear-gradient(135deg, hsl(36, 20%, 8%), hsl(20, 18%, 16%), hsl(36, 15%, 12%));
+    background: linear-gradient(135deg, hsl(40, 30%, 95%), hsl(40, 25%, 92%), hsl(40, 20%, 89%));
   }
   .shadow-sand {
-    box-shadow: 0 4px 24px -4px hsl(33 38% 61% / 0.1);
+    box-shadow: 0 4px 24px -4px hsl(155 35% 28% / 0.15);
   }
   .shadow-elevated {
-    box-shadow: 0 12px 40px -8px hsl(40 12% 11% / 0.4);
+    box-shadow: 0 12px 40px -8px hsl(150 25% 15% / 0.1);
   }
   .text-sand {
-    color: hsl(33, 38%, 61%);
+    color: hsl(43, 65%, 52%);
   }
   .text-olive {
-    color: hsl(72, 16%, 38%);
+    color: hsl(155, 35%, 28%);
   }
   .text-dust {
-    color: hsl(30, 14%, 47%);
+    color: hsl(145, 15%, 50%);
   }
 
   @keyframes dust-drift {
