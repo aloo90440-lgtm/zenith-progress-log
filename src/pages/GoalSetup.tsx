@@ -47,7 +47,7 @@ const GoalSetup = () => {
       if (!/^[\u0600-\u06FFa-zA-Z\s]+$/.test(name.trim())) { setError("الاسم يجب أن يحتوي على حروف فقط"); return false; }
       if (!phone.trim()) { setError("رقم التليفون مطلوب"); return false; }
       const digitsOnly = phone.replace(/\D/g, '');
-      if (digitsOnly.length < 10 || digitsOnly.length > 11) { setError("رقم الهاتف يجب أن يكون ١٠ أو ١١ رقم"); return false; }
+      if (digitsOnly.length !== 10) { setError("رقم الهاتف يجب أن يكون ١٠ ارقام"); return false; }
       return true;
     }
     if (step === 1) {
