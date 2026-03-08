@@ -26,7 +26,9 @@ const WeeklyReport = () => {
   const distractionStats = getDistractionStats(data.logs);
   const notes = getWeeklyNotes(data.logs);
 
-  // Axis breakdown
+  // Axis breakdown with weighted max
+  const weights = data.user!.axisWeights;
+  const maxScores = getAllAxisMaxScores(weights);
   const axisTotals = { mental: 0, physical: 0, religious: 0 };
   const distractionTotal = weeklyLogs.reduce((s, l) => s + l.distraction.points, 0);
   for (const l of weeklyLogs) {
@@ -34,7 +36,7 @@ const WeeklyReport = () => {
     axisTotals.physical += l.axes.physical.finalScore;
     axisTotals.religious += l.axes.religious.finalScore;
   }
-  const maxAxisScore = weeklyLogs.length * 10;
+  const maxPerDay = { mental: maxScores.mental, physical: maxScores.physical, religious: maxScores.religious };
 
   return (
     <div className="min-h-screen gradient-desert px-6 py-8 pb-24" dir="rtl">
