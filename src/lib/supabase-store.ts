@@ -58,6 +58,7 @@ export interface DbDailyLog {
   id?: string;
   date: string;
   distraction_tier: string;
+  distraction_type: string;
   distraction_points: number;
   distraction_istighfar: number;
   mental_status: string;
