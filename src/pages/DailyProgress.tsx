@@ -32,6 +32,13 @@ const DailyProgress = () => {
   const [totalScore, setTotalScore] = useState(0);
   const [profile, setProfile] = useState<DbProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recoveryModal, setRecoveryModal] = useState<{
+    axisKey: 'mental' | 'physical' | 'religious';
+    status: 'minor_lack' | 'major_lack';
+    pointsLost: number;
+  } | null>(null);
+  const [recoveryInput, setRecoveryInput] = useState("");
+  const [recoveryResult, setRecoveryResult] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
