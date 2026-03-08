@@ -59,7 +59,7 @@ const Landing = () => {
           transition={{ delay: 0.9, duration: 0.6 }}
           className="text-muted-foreground text-lg max-w-md mx-auto mb-12 leading-relaxed"
         >
-          نظام يومي لقياس انضباطك عبر ثلاثة محاور: الذهني، الجسدي، والديني
+          ابدأ بناء كيان صلب لا يُكسر... بالمتابعة يومًا بعد يوم
         </motion.p>
 
         <motion.button
