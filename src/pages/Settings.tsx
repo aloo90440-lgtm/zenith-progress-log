@@ -61,7 +61,7 @@ const SettingsPage = () => {
             </div>
 
             <div className="space-y-4 pt-2">
-              <p className="text-sm text-muted-foreground font-sans-ui">أوزان المحاور</p>
+              <p className="text-sm text-muted-foreground font-sans-ui">صعوبة المحاور</p>
               {[
                 { label: "الذهني", value: mentalW, setter: setMentalW },
                 { label: "الجسدي", value: physicalW, setter: setPhysicalW },
