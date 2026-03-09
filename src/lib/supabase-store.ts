@@ -142,6 +142,9 @@ export interface DbAppendedTask {
   created_date: string;
   expiry_date: string;
   completed: boolean;
+  task_desc?: string | null;
+  task_quantity?: number | null;
+  task_unit?: string | null;
 }
 
 export async function saveAppendedTasks(tasks: DbAppendedTask[]) {
