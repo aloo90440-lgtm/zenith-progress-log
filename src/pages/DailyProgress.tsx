@@ -430,7 +430,23 @@ const DailyProgress = () => {
           </div>
         )}
 
-        <button onClick={goNext}
+        <button onClick={() => {
+          // Navigate from task input to recovery or next axis
+          const recoveryStep = `${axisKey}_recovery` as StepId;
+          if (stepsSequence.includes(recoveryStep)) {
+            setCurrentStep(recoveryStep);
+          } else {
+            const axes = ['mental', 'physical', 'religious'];
+            const currentIdx = axes.indexOf(axisKey);
+            for (let i = currentIdx + 1; i < axes.length; i++) {
+              if (stepsSequence.includes(axes[i] as StepId)) {
+                setCurrentStep(axes[i] as StepId);
+                return;
+              }
+            }
+            setCurrentStep('note');
+          }
+        }}
           disabled={isNotDone ? (getValidTasks(axisKey).length > 0 && splitChoice[axisKey] === undefined) : false}
           className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-3.5 rounded-lg hover:opacity-90 transition-opacity shadow-sand disabled:opacity-50">
           التالي
