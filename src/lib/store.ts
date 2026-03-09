@@ -490,7 +490,7 @@ export function getGoalProgress(logs: DailyLog[]): { current: number; target: nu
   const current = logs.length;
   const percentage = Math.min(100, Math.round((current / target) * 100));
   
-  const avgScore = logs.length > 0 ? logs.reduce((s, l) => s + (l.total_score ?? l.totalScore ?? 0), 0) / logs.length : 0;
+  const avgScore = logs.length > 0 ? logs.reduce((s, l) => s + (l.totalScore ?? 0), 0) / logs.length : 0;
   let message = '';
   if (avgScore >= 36) message = 'تقدم ممتاز! 🔥';
   else if (avgScore >= 28) message = 'تقدم مستمر! ⭐';
