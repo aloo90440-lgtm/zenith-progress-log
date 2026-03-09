@@ -17,43 +17,64 @@ export type Database = {
       appended_tasks: {
         Row: {
           axis_type: string
+          cancelled: boolean | null
           completed: boolean
           created_at: string
           created_date: string
+          current_day: number | null
           expiry_date: string
           id: string
+          istighfar_minutes: number | null
+          original_points: number | null
+          parent_task_id: string | null
           points_to_reclaim: number
           reclaim_percentage: number
+          split_days: number | null
           task_desc: string | null
           task_quantity: number | null
+          task_type: string | null
           task_unit: string | null
           user_id: string
         }
         Insert: {
           axis_type: string
+          cancelled?: boolean | null
           completed?: boolean
           created_at?: string
           created_date: string
+          current_day?: number | null
           expiry_date: string
           id?: string
+          istighfar_minutes?: number | null
+          original_points?: number | null
+          parent_task_id?: string | null
           points_to_reclaim?: number
           reclaim_percentage?: number
+          split_days?: number | null
           task_desc?: string | null
           task_quantity?: number | null
+          task_type?: string | null
           task_unit?: string | null
           user_id: string
         }
         Update: {
           axis_type?: string
+          cancelled?: boolean | null
           completed?: boolean
           created_at?: string
           created_date?: string
+          current_day?: number | null
           expiry_date?: string
           id?: string
+          istighfar_minutes?: number | null
+          original_points?: number | null
+          parent_task_id?: string | null
           points_to_reclaim?: number
           reclaim_percentage?: number
+          split_days?: number | null
           task_desc?: string | null
           task_quantity?: number | null
+          task_type?: string | null
           task_unit?: string | null
           user_id?: string
         }
