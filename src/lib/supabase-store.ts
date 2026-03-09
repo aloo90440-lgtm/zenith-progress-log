@@ -142,6 +142,9 @@ export interface DbAppendedTask {
   created_date: string;
   expiry_date: string;
   completed: boolean;
+  task_desc?: string | null;
+  task_quantity?: number | null;
+  task_unit?: string | null;
 }
 
 export async function saveAppendedTasks(tasks: DbAppendedTask[]) {
@@ -182,7 +185,8 @@ export async function markTaskCompleted(taskId: string) {
 
 export async function generateAndSaveAppendedTasks(
   axes: { mental: { deduction: number; finalScore: number }; physical: { deduction: number; finalScore: number }; religious: { deduction: number; finalScore: number } },
-  date: string
+  date: string,
+  recoveryInfo?: Record<string, { task_desc: string; task_quantity: number | null; task_unit: string | null }>
 ) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
@@ -195,6 +199,7 @@ export async function generateAndSaveAppendedTasks(
     if (entry.deduction > 0) {
       const baseScore = entry.finalScore + entry.deduction;
       const isMinor = entry.finalScore >= baseScore * 0.6;
+      const info = recoveryInfo?.[axis];
       tasks.push({
         axis_type: axis,
         points_to_reclaim: isMinor ? Math.round(entry.deduction * 0.15) : Math.round(entry.deduction * 0.35),
@@ -202,6 +207,9 @@ export async function generateAndSaveAppendedTasks(
         created_date: date,
         expiry_date: getDateOffset(date, 2),
         completed: false,
+        task_desc: info?.task_desc || null,
+        task_quantity: info?.task_quantity || null,
+        task_unit: info?.task_unit || null,
       });
     }
   }
