@@ -472,7 +472,7 @@ export function getChallengeMapData(logs: DailyLog[]): Array<{ date: string; sco
   const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
   return sorted.slice(0, 20).map((l, i) => ({
     date: l.date,
-    score: l.total_score ?? l.totalScore,
+    score: l.totalScore,
     day: i + 1,
   }));
 }
