@@ -7,10 +7,8 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import GoalSetup from "./pages/GoalSetup";
-import Dashboard from "./pages/Dashboard";
 import DailyProgress from "./pages/DailyProgress";
 import Statistics from "./pages/Statistics";
-import WeeklyReport from "./pages/WeeklyReport";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -34,10 +32,10 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/setup" element={<ProtectedRoute><GoalSetup /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/progress" element={<ProtectedRoute><DailyProgress /></ProtectedRoute>} />
             <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
-            <Route path="/weekly" element={<ProtectedRoute><WeeklyReport /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<Navigate to="/statistics" replace />} />
+            <Route path="/weekly" element={<Navigate to="/statistics" replace />} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

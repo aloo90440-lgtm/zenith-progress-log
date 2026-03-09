@@ -11,17 +11,44 @@ export const DISTRACTION_TYPE_LABELS: Record<DistractionType, string> = {
   other: 'أخرى',
 };
 
+// ===== Axis-specific units =====
+
+export const AXIS_UNITS: Record<string, { value: string; label: string }[]> = {
+  mental: [
+    { value: 'page', label: 'صفحة' },
+    { value: 'minute', label: 'دقيقة' },
+    { value: 'question', label: 'سؤال' },
+    { value: 'word', label: 'كلمة' },
+  ],
+  physical: [
+    { value: 'minute', label: 'دقيقة' },
+    { value: 'rep', label: 'عدة' },
+    { value: 'set', label: 'مجموعة' },
+    { value: 'km', label: 'كم' },
+  ],
+  religious: [
+    { value: 'page', label: 'صفحة' },
+    { value: 'ayah', label: 'آية' },
+    { value: 'rakah', label: 'ركعة' },
+    { value: 'dhikr', label: 'ذكر' },
+    { value: 'minute', label: 'دقيقة' },
+  ],
+};
+
+export function getUnitLabel(axisType: string, unitValue: string): string {
+  const units = AXIS_UNITS[axisType] || [];
+  return units.find(u => u.value === unitValue)?.label || unitValue;
+}
+
+// ===== Interfaces =====
+
 export interface UserProfile {
   name: string;
   phone?: string;
   email?: string;
   primaryGoal: string;
-  goalImportance: string; // min 5 lines
-  axisWeights: {
-    mental: number; // 10-100%
-    physical: number;
-    religious: number;
-  };
+  goalImportance: string;
+  axisWeights: { mental: number; physical: number; religious: number };
   createdAt: string;
 }
 
@@ -38,11 +65,17 @@ export interface DistractionEntry {
   istighfarMinutes: number;
 }
 
+export interface TaskInput {
+  name: string;
+  quantity: number;
+  unit: string; // unit value from AXIS_UNITS
+}
+
 export interface AppendedTask {
   id: string;
   axisType: 'mental' | 'physical' | 'religious';
   pointsToReclaim: number;
-  reclaimPercentage: number; // 15% for minor, 35% for major
+  reclaimPercentage: number;
   createdDate: string;
   expiryDate: string;
   completed: boolean;
@@ -51,13 +84,9 @@ export interface AppendedTask {
 export interface DailyLog {
   date: string;
   distraction: DistractionEntry;
-  axes: {
-    mental: AxisEntry;
-    physical: AxisEntry;
-    religious: AxisEntry;
-  };
-  appendedTasksCompleted: string[]; // IDs
-  appendedTasksFailed: string[]; // IDs
+  axes: { mental: AxisEntry; physical: AxisEntry; religious: AxisEntry };
+  appendedTasksCompleted: string[];
+  appendedTasksFailed: string[];
   dailyNote: string;
   totalScore: number;
   consecutiveDistraction: boolean;
@@ -71,8 +100,6 @@ export interface JourneyData {
 }
 
 const STORAGE_KEY = 'the-journey-v2';
-
-// ===== Persistence =====
 
 export function loadJourney(): JourneyData {
   try {
@@ -92,16 +119,46 @@ export function saveUser(user: UserProfile) {
   saveJourney(data);
 }
 
+// ===== 9 PM Day Boundary =====
+
+/** 
+ * Get the "effective date" for the app.
+ * New day starts at 9 PM (21:00).
+ * 9 PM - midnight → today's date (evaluating today)
+ * midnight - 6 AM → yesterday's date (still same evaluation window)
+ * 6 AM - 9 PM → today's date (but evaluation window is closed)
+ */
+export function getEffectiveDate(): string {
+  const now = new Date();
+  const hour = now.getHours();
+  if (hour < 6) {
+    // Between midnight and 6 AM - still yesterday's evaluation window
+    const d = new Date(now);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+  return now.toISOString().slice(0, 10);
+}
+
+/** Check if the evaluation window is currently open (9 PM - 6 AM) */
+export function isEvaluationWindowOpen(): boolean {
+  const hour = new Date().getHours();
+  return hour >= 21 || hour < 6;
+}
+
+/** Legacy - now uses getEffectiveDate */
+export function getTodayStr(): string {
+  return getEffectiveDate();
+}
+
 // ===== Scoring Logic =====
 
-/** Calculate the max points an axis can earn based on its weight proportion of 30 total points */
 export function getAxisMaxScore(weights: { mental: number; physical: number; religious: number }, axis: 'mental' | 'physical' | 'religious'): number {
   const totalWeight = weights.mental + weights.physical + weights.religious;
   if (totalWeight === 0) return 10;
   return Math.round((weights[axis] / totalWeight) * 30);
 }
 
-/** Get all three axis max scores */
 export function getAllAxisMaxScores(weights: { mental: number; physical: number; religious: number }): { mental: number; physical: number; religious: number } {
   const totalWeight = weights.mental + weights.physical + weights.religious;
   if (totalWeight === 0) return { mental: 10, physical: 10, religious: 10 };
@@ -112,14 +169,12 @@ export function getAllAxisMaxScores(weights: { mental: number; physical: number;
     religious: (weights.religious / totalWeight) * 30,
   };
   
-  // Round to integers while preserving total of 30
   const rounded = {
     mental: Math.round(raw.mental),
     physical: Math.round(raw.physical),
     religious: Math.round(raw.religious),
   };
   
-  // Adjust rounding error on the largest
   const diff = 30 - (rounded.mental + rounded.physical + rounded.religious);
   if (diff !== 0) {
     const largest = Object.entries(rounded).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof rounded;
@@ -144,6 +199,17 @@ export function getDistractionScore(tier: DistractionTier): DistractionEntry {
   }
 }
 
+/** Recovery percentages: minor = 20%, major = 40% */
+export function getRecoveryFactor(status: 'minor_lack' | 'major_lack'): number {
+  return status === 'minor_lack' ? 0.20 : 0.40;
+}
+
+/** Calculate recovery quantity: original * factor, rounded smartly (no decimals) */
+export function calcRecoveryQuantity(originalQty: number, factor: number): number {
+  const raw = originalQty * factor;
+  return Math.round(raw); // 2.3→2, 2.6→3
+}
+
 export function checkConsecutiveDistraction(logs: DailyLog[], todayDate: string): boolean {
   const yesterday = getDateOffset(todayDate, -1);
   const yesterdayLog = logs.find(l => l.date === yesterday);
@@ -156,10 +222,18 @@ export function calculateDailyTotal(
   consecutiveDistraction: boolean,
   appendedRecovered: number
 ): number {
-  if (consecutiveDistraction) return 0; // consecutive distraction = 0 total
-
+  if (consecutiveDistraction) return 0;
   const axisTotal = axes.mental.finalScore + axes.physical.finalScore + axes.religious.finalScore;
   return Math.min(40, axisTotal + distraction.points + appendedRecovered);
+}
+
+// ===== Daily Ratings =====
+
+export function getDailyRating(score: number): { label: string; color: string; emoji: string } {
+  if (score >= 36) return { label: 'امتياز', color: 'text-primary', emoji: '🏆' };
+  if (score >= 28) return { label: 'جيد جدًا', color: 'text-accent', emoji: '⭐' };
+  if (score >= 20) return { label: 'جيد', color: 'text-dust', emoji: '👍' };
+  return { label: 'مقبول', color: 'text-destructive', emoji: '📉' };
 }
 
 // ===== Appended/Recovery Tasks =====
@@ -174,19 +248,19 @@ export function generateAppendedTasks(
   for (const axis of axisTypes) {
     const entry = axes[axis];
     if (entry.deduction > 0) {
-      const isMinor = entry.finalScore === 7;
+      const isMinor = entry.finalScore >= entry.baseScore * 0.6;
+      const pct = isMinor ? 0.20 : 0.40;
       tasks.push({
         id: `${date}-${axis}-${Date.now()}`,
         axisType: axis,
-        pointsToReclaim: isMinor ? Math.round(entry.deduction * 0.15) : Math.round(entry.deduction * 0.35),
-        reclaimPercentage: isMinor ? 15 : 35,
+        pointsToReclaim: Math.round(entry.deduction * pct),
+        reclaimPercentage: isMinor ? 20 : 40,
         createdDate: date,
         expiryDate: getDateOffset(date, 2),
         completed: false,
       });
     }
   }
-
   return tasks;
 }
 
@@ -196,40 +270,25 @@ export function getPendingAppendedTasks(data: JourneyData, date: string): Append
     t.expiryDate >= date &&
     t.createdDate < date &&
     !data.logs.some(l => l.date >= t.createdDate && l.date < date && l.appendedTasksFailed.includes(t.id))
-  ).slice(0, 3); // max 3 per day
+  ).slice(0, 3);
 }
-
-// ===== Save Daily Log =====
 
 export function saveDailyLog(log: DailyLog) {
   const data = loadJourney();
   const idx = data.logs.findIndex(l => l.date === log.date);
   if (idx >= 0) data.logs[idx] = log;
   else data.logs.push(log);
-
-  // Generate new appended tasks from today's deductions
   const newTasks = generateAppendedTasks(log.axes, log.date);
   data.appendedTasks.push(...newTasks);
-
-  // Mark completed/failed appended tasks
   for (const id of log.appendedTasksCompleted) {
     const t = data.appendedTasks.find(t => t.id === id);
     if (t) t.completed = true;
   }
-
-  // Remove expired tasks
-  data.appendedTasks = data.appendedTasks.filter(t =>
-    t.completed || t.expiryDate >= log.date
-  );
-
+  data.appendedTasks = data.appendedTasks.filter(t => t.completed || t.expiryDate >= log.date);
   saveJourney(data);
 }
 
 // ===== Date Helpers =====
-
-export function getTodayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function getDateOffset(dateStr: string, days: number): string {
   const d = new Date(dateStr);
@@ -244,7 +303,6 @@ export function getStreak(logs: DailyLog[]): number {
   const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
   let streak = 0;
   let checkDate = new Date(getTodayStr());
-
   for (let i = 0; i < 365; i++) {
     const dateStr = checkDate.toISOString().slice(0, 10);
     const found = sorted.find(l => l.date === dateStr && l.totalScore > 0);
@@ -253,6 +311,25 @@ export function getStreak(logs: DailyLog[]): number {
     checkDate.setDate(checkDate.getDate() - 1);
   }
   return streak;
+}
+
+export function getLongestStreak(logs: DailyLog[]): number {
+  if (!logs.length) return 0;
+  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
+  let longest = 0;
+  let current = 0;
+  let lastDate = '';
+  for (const log of sorted) {
+    if (log.totalScore <= 0) { current = 0; continue; }
+    if (lastDate && getDateOffset(lastDate, 1) === log.date) {
+      current++;
+    } else {
+      current = 1;
+    }
+    lastDate = log.date;
+    longest = Math.max(longest, current);
+  }
+  return longest;
 }
 
 export function getWeeklyLogs(logs: DailyLog[]): DailyLog[] {
@@ -291,18 +368,32 @@ export function getAxisWeakness(logs: DailyLog[]): string | null {
   if (!logs.length) return null;
   const weekly = getWeeklyLogs(logs);
   if (!weekly.length) return null;
-
   const totals = { mental: 0, physical: 0, religious: 0 };
   for (const l of weekly) {
     totals.mental += l.axes.mental.finalScore;
     totals.physical += l.axes.physical.finalScore;
     totals.religious += l.axes.religious.finalScore;
   }
-
   const labels: Record<string, string> = { mental: 'الذهني', physical: 'الجسدي', religious: 'الديني' };
   const min = Math.min(totals.mental, totals.physical, totals.religious);
   const weakAxis = Object.entries(totals).find(([, v]) => v === min);
   return weakAxis ? labels[weakAxis[0]] : null;
+}
+
+export function getAxisStrength(logs: DailyLog[]): string | null {
+  if (!logs.length) return null;
+  const weekly = getWeeklyLogs(logs);
+  if (!weekly.length) return null;
+  const totals = { mental: 0, physical: 0, religious: 0 };
+  for (const l of weekly) {
+    totals.mental += l.axes.mental.finalScore;
+    totals.physical += l.axes.physical.finalScore;
+    totals.religious += l.axes.religious.finalScore;
+  }
+  const labels: Record<string, string> = { mental: 'الذهني', physical: 'الجسدي', religious: 'الديني' };
+  const max = Math.max(totals.mental, totals.physical, totals.religious);
+  const strongAxis = Object.entries(totals).find(([, v]) => v === max);
+  return strongAxis ? labels[strongAxis[0]] : null;
 }
 
 export function getDistractionStats(logs: DailyLog[]): { clean: number; total: number } {
@@ -373,4 +464,37 @@ export function getHeatmapData(logs: DailyLog[], days: number = 30): Array<{ dat
     result.push({ date: d, score: log?.totalScore || 0 });
   }
   return result;
+}
+
+// ===== Challenge Map (20 days) =====
+
+export function getChallengeMapData(logs: DailyLog[]): Array<{ date: string; score: number; day: number }> {
+  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
+  return sorted.slice(0, 20).map((l, i) => ({
+    date: l.date,
+    score: l.totalScore,
+    day: i + 1,
+  }));
+}
+
+export function getChallengeBadge(score: number): { label: string; emoji: string; color: string } {
+  if (score >= 35) return { label: 'محارب', emoji: '⚔️', color: 'bg-primary/20 text-primary border-primary/30' };
+  if (score >= 20) return { label: 'محارب بدون ثياب', emoji: '🛡️', color: 'bg-accent/20 text-accent border-accent/30' };
+  return { label: 'سلحفاة', emoji: '🐢', color: 'bg-destructive/20 text-destructive border-destructive/30' };
+}
+
+// ===== Goal Progress (20-day target) =====
+
+export function getGoalProgress(logs: DailyLog[]): { current: number; target: number; percentage: number; message: string } {
+  const target = 20;
+  const current = logs.length;
+  const percentage = Math.min(100, Math.round((current / target) * 100));
+  
+  const avgScore = logs.length > 0 ? logs.reduce((s, l) => s + (l.totalScore ?? 0), 0) / logs.length : 0;
+  let message = '';
+  if (avgScore >= 36) message = 'تقدم ممتاز! 🔥';
+  else if (avgScore >= 28) message = 'تقدم مستمر! ⭐';
+  else message = 'تقدم أبطأ، اجتهد أكثر! 💪';
+  
+  return { current, target, percentage, message };
 }
