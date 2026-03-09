@@ -24,6 +24,9 @@ export type Database = {
           id: string
           points_to_reclaim: number
           reclaim_percentage: number
+          task_desc: string | null
+          task_quantity: number | null
+          task_unit: string | null
           user_id: string
         }
         Insert: {
@@ -35,6 +38,9 @@ export type Database = {
           id?: string
           points_to_reclaim?: number
           reclaim_percentage?: number
+          task_desc?: string | null
+          task_quantity?: number | null
+          task_unit?: string | null
           user_id: string
         }
         Update: {
@@ -46,6 +52,9 @@ export type Database = {
           id?: string
           points_to_reclaim?: number
           reclaim_percentage?: number
+          task_desc?: string | null
+          task_quantity?: number | null
+          task_unit?: string | null
           user_id?: string
         }
         Relationships: []
