@@ -14,10 +14,13 @@ import {
 } from "@/lib/supabase-store";
 import { Footprints, TrendingUp, BarChart3, FileText, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+
+type StepId = 'distraction' | 'distraction_type' | 'mental' | 'mental_recovery' | 'physical' | 'physical_recovery' | 'religious' | 'religious_recovery' | 'note' | 'done';
 
 const DailyProgress = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState<StepId>('distraction');
   const [pendingSelection, setPendingSelection] = useState<string | null>(null);
   const [distraction, setDistraction] = useState<DistractionTier | null>(null);
   const [distractionType, setDistractionType] = useState<DistractionType | null>(null);
@@ -42,26 +45,27 @@ const DailyProgress = () => {
   const [recoveryDetectedUnit, setRecoveryDetectedUnit] = useState<{ unit: string; unitLabel: string } | null>(null);
   const [recoveryResult, setRecoveryResult] = useState<{ value: number; unit: string } | null>(null);
 
-  // Smart unit detection from task description keywords
+  // Religious recovery state
+  const [religiousCategory, setReligiousCategory] = useState<'quran' | 'knowledge' | null>(null);
+  const [quranSelections, setQuranSelections] = useState<Record<string, boolean>>({ memorize: false, review: false, read: false });
+  const [quranQuantities, setQuranQuantities] = useState<Record<string, string>>({ memorize: '', review: '', read: '' });
+  const [knowledgeType, setKnowledgeType] = useState<'lectures' | 'books' | null>(null);
+  const [knowledgeQuantity, setKnowledgeQuantity] = useState('');
+
+  // Per-axis recovery info to save with appended tasks
+  const [axisRecoveryInfo, setAxisRecoveryInfo] = useState<Record<string, { task_desc: string; task_quantity: number | null; task_unit: string | null }>>({});
+
+  // Smart unit detection for mental/physical
   const detectUnitFromTask = (text: string): { unit: string; unitLabel: string } | null => {
     const t = text.trim().toLowerCase();
-    // Pages
     if (/صفح|قراءة|قرا|كتاب|مذاكر|مراجع|ورق/.test(t)) return { unit: "pages", unitLabel: "صفحة" };
-    // Questions
     if (/سؤال|اسئل|أسئل|حل|مسأل|مسائل|تمارين ذهن/.test(t)) return { unit: "questions", unitLabel: "سؤال" };
-    // Reps (exercise)
-    if (/ضغط|سكوات|عقل|بطن|تمرين|عدات|عدّات|بلانك|pull|push/.test(t)) return { unit: "reps", unitLabel: "عدّة" };
-    // Quran ayat
+    if (/ضغط|سكوات|عقل|بطن|تمرين|عدات|عدّات|بلانك|pull|push|سحب|أوزان|حديد|وزن/.test(t)) return { unit: "reps", unitLabel: "عدّة" };
     if (/آي[اة]|ايات|آيات/.test(t)) return { unit: "ayat", unitLabel: "آية" };
-    // Quran pages
     if (/قرآن|قران|حفظ|تلاو/.test(t)) return { unit: "pages", unitLabel: "صفحة" };
-    // Athkar
     if (/ذكر|أذكار|اذكار|استغفار|تسبيح|صلاة على/.test(t)) return { unit: "count", unitLabel: "ذِكر" };
-    // Running/walking
-    if (/جري|مشي|سباح|ركض/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
-    // Listen
+    if (/جري|مشي|سباح|ركض|كارديو|هرول|تمدد|يوغا/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
     if (/سماع|استماع|بودكاست|محاضر/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
-    // Generic time
     if (/دقيق|وقت|ساع|زمن/.test(t)) return { unit: "minutes", unitLabel: "دقيقة" };
     return null;
   };
@@ -71,16 +75,10 @@ const DailyProgress = () => {
       const p = await getProfile();
       if (!p || !p.primary_goal) { navigate("/setup"); return; }
       setProfile(p);
-
       const pending = await getPendingAppendedTasksDb(getTodayStr());
       setPendingTasks(pending);
-
-      // Load saved data for daily note only (not selections, to keep form fresh)
       const todayLog = await getTodayLog();
-      if (todayLog) {
-        setDailyNote(todayLog.daily_note);
-      }
-
+      if (todayLog) setDailyNote(todayLog.daily_note);
       setLoading(false);
     };
     load();
@@ -91,16 +89,102 @@ const DailyProgress = () => {
   const weights = profile.axis_weights;
   const maxScores = getAllAxisMaxScores(weights);
   const hasDistractionTypeStep = distraction !== null && distraction !== 'none';
-  const hasAppendedStep = pendingTasks.length > 0;
-  // Steps: 0=distraction, 1=type(conditional), 2=mental, 3=physical, 4=religious, 5=appended(conditional), 6=note, 7=done
-  const typeStepOffset = hasDistractionTypeStep ? 0 : -1;
-  const mentalStep = 2 + typeStepOffset;
-  const physicalStep = 3 + typeStepOffset;
-  const religiousStep = 4 + typeStepOffset;
-  const appendedStep = 5 + typeStepOffset;
-  const noteStep = hasAppendedStep ? 6 + typeStepOffset : 5 + typeStepOffset;
-  const doneStep = noteStep + 1;
-  const totalSteps = doneStep;
+
+  // Per-axis pending tasks
+  const mentalPending = pendingTasks.filter(t => t.axis_type === 'mental');
+  const physicalPending = pendingTasks.filter(t => t.axis_type === 'physical');
+  const religiousPending = pendingTasks.filter(t => t.axis_type === 'religious');
+
+  // Dynamic steps sequence
+  const stepsSequence: StepId[] = [
+    'distraction',
+    ...(hasDistractionTypeStep ? ['distraction_type' as StepId] : []),
+    'mental',
+    ...(mentalPending.length > 0 ? ['mental_recovery' as StepId] : []),
+    'physical',
+    ...(physicalPending.length > 0 ? ['physical_recovery' as StepId] : []),
+    'religious',
+    ...(religiousPending.length > 0 ? ['religious_recovery' as StepId] : []),
+    'note',
+  ];
+
+  const currentStepIndex = stepsSequence.indexOf(currentStep);
+  const totalStepsCount = stepsSequence.length;
+
+  const goToNextFromAxis = (axisKey: 'mental' | 'physical' | 'religious') => {
+    const recoveryStepId = `${axisKey}_recovery` as StepId;
+    if (stepsSequence.includes(recoveryStepId)) {
+      setCurrentStep(recoveryStepId);
+    } else {
+      const axisIdx = stepsSequence.indexOf(axisKey);
+      if (axisIdx >= 0 && axisIdx < stepsSequence.length - 1) {
+        setCurrentStep(stepsSequence[axisIdx + 1]);
+      }
+    }
+  };
+
+  const goNext = () => {
+    const idx = stepsSequence.indexOf(currentStep);
+    if (idx < stepsSequence.length - 1) setCurrentStep(stepsSequence[idx + 1]);
+  };
+
+  const goBack = () => {
+    const idx = stepsSequence.indexOf(currentStep);
+    if (idx > 0) setCurrentStep(stepsSequence[idx - 1]);
+  };
+
+  const saveRecoveryInfoForAxis = (axisKey: string) => {
+    if (!recoveryModal) return;
+    const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
+
+    if (axisKey === 'religious') {
+      const desc = buildReligiousRecoveryDesc(pct);
+      if (desc) {
+        setAxisRecoveryInfo(prev => ({ ...prev, [axisKey]: { task_desc: desc, task_quantity: null, task_unit: null } }));
+      }
+    } else {
+      if (recoveryTaskDesc && recoveryResult) {
+        setAxisRecoveryInfo(prev => ({
+          ...prev,
+          [axisKey]: {
+            task_desc: `${recoveryTaskDesc} - ${recoveryResult.value} ${recoveryResult.unit}`,
+            task_quantity: recoveryResult.value,
+            task_unit: recoveryDetectedUnit?.unit || null,
+          }
+        }));
+      }
+    }
+  };
+
+  const buildReligiousRecoveryDesc = (pct: number): string | null => {
+    if (religiousCategory === 'quran') {
+      const quranLabels: Record<string, string> = { memorize: 'حفظ', review: 'مراجعة', read: 'قراءة' };
+      const parts: string[] = [];
+      for (const [key, label] of Object.entries(quranLabels)) {
+        if (quranSelections[key]) {
+          const qty = parseFloat(quranQuantities[key] || '0');
+          const comp = Math.round(qty * pct * 100) / 100;
+          if (comp > 0) parts.push(`${label} ${comp} صفحة`);
+        }
+      }
+      return parts.length > 0 ? parts.join('، ') : null;
+    } else if (religiousCategory === 'knowledge') {
+      const qty = parseFloat(knowledgeQuantity || '0');
+      const comp = Math.round(qty * pct * 100) / 100;
+      const unit = knowledgeType === 'lectures' ? 'دقيقة' : 'صفحة';
+      const label = knowledgeType === 'lectures' ? 'محاضرات' : 'كتب';
+      return comp > 0 ? `${label} ${comp} ${unit}` : null;
+    }
+    return null;
+  };
+
+  const resetReligiousRecovery = () => {
+    setReligiousCategory(null);
+    setQuranSelections({ memorize: false, review: false, read: false });
+    setQuranQuantities({ memorize: '', review: '', read: '' });
+    setKnowledgeType(null);
+    setKnowledgeQuantity('');
+  };
 
   const handleSubmit = async () => {
     if (!distraction || !mentalStatus || !physicalStatus || !religiousStatus) return;
@@ -116,12 +200,7 @@ const DailyProgress = () => {
       return sum + (t?.points_to_reclaim || 0);
     }, 0);
 
-    const axes = {
-      mental: mentalScore,
-      physical: physicalScore,
-      religious: religiousScore,
-    };
-
+    const axes = { mental: mentalScore, physical: physicalScore, religious: religiousScore };
     const axisTotal = axes.mental.finalScore + axes.physical.finalScore + axes.religious.finalScore;
     const total = consecutive ? 0 : Math.min(40, axisTotal + distractionEntry.points + recoveredPoints);
     setTotalScore(total);
@@ -149,31 +228,23 @@ const DailyProgress = () => {
       consecutive_distraction: consecutive,
     });
 
-    // Mark completed appended tasks
-    for (const id of completedTaskIds) {
-      await markTaskCompleted(id);
-    }
-
-    // Generate new appended tasks from deductions
-    await generateAndSaveAppendedTasks(axes, getTodayStr());
+    for (const id of completedTaskIds) await markTaskCompleted(id);
+    await generateAndSaveAppendedTasks(axes, getTodayStr(), axisRecoveryInfo);
 
     setMessage(getMotivationalMessage());
-    setStep(doneStep);
+    setCurrentStep('done');
   };
 
   const distractionTiers: DistractionTier[] = ['none', 'less_1h', '2_3h', '4h_plus'];
   const taskStatuses: TaskStatus[] = ['completed', 'minor_lack', 'major_lack', 'not_done'];
+  const distractionTypes: DistractionType[] = ['social', 'movies', 'music', 'other'];
 
   const selectWithDelay = (key: string, action: () => void) => {
     setPendingSelection(key);
-    setTimeout(() => {
-      action();
-      setPendingSelection(null);
-    }, 350);
+    setTimeout(() => { action(); setPendingSelection(null); }, 350);
   };
 
   const renderStatusOption = (status: TaskStatus, selected: TaskStatus | null, onSelect: (s: TaskStatus) => void, axisKey: 'mental' | 'physical' | 'religious') => {
-    const score = getAxisScore(status, maxScores[axisKey]);
     const isActive = pendingSelection === `${axisKey}-${status}`;
     return (
       <button key={status} tabIndex={-1} onClick={() => selectWithDelay(`${axisKey}-${status}`, () => onSelect(status))}
@@ -186,8 +257,172 @@ const DailyProgress = () => {
     );
   };
 
-  const distractionTypes: DistractionType[] = ['social', 'movies', 'music', 'other'];
-  const isDone = step === doneStep;
+  const renderRecoveryStep = (axisKey: 'mental' | 'physical' | 'religious', axisPending: (DbAppendedTask & { id: string })[]) => (
+    <div>
+      <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">مهام تعويضية - {AXIS_LABELS[axisKey]}</p>
+      <h2 className="font-serif-display text-xl font-semibold text-foreground mb-6 text-center">هل أنجزت المهام التعويضية؟</h2>
+      <div className="space-y-3 mb-6">
+        {axisPending.map(task => {
+          const isCompleted = completedTaskIds.includes(task.id);
+          const isFailed = failedTaskIds.includes(task.id);
+          return (
+            <div key={task.id} className="bg-card border border-border rounded-xl p-4">
+              <p className="text-foreground text-sm mb-1 font-sans-ui font-semibold">{AXIS_LABELS[task.axis_type]}</p>
+              {task.task_desc && (
+                <p className="text-primary text-sm mb-1 font-sans-ui">📋 {task.task_desc}</p>
+              )}
+              <p className="text-muted-foreground text-xs mb-1">من تاريخ: {task.created_date}</p>
+              <p className="text-muted-foreground text-xs mb-3">يمكن استرجاع {task.points_to_reclaim} نقطة ({task.reclaim_percentage}%)</p>
+              <div className="flex gap-2">
+                <button onClick={() => {
+                  setCompletedTaskIds(prev => [...prev.filter(id => id !== task.id), task.id]);
+                  setFailedTaskIds(prev => prev.filter(id => id !== task.id));
+                }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-sans-ui transition-all ${isCompleted ? 'bg-accent/20 border border-accent text-accent' : 'border border-border text-muted-foreground hover:border-accent/30'}`}>
+                  <CheckCircle2 className="w-4 h-4" /> أنجزت
+                </button>
+                <button onClick={() => {
+                  setFailedTaskIds(prev => [...prev.filter(id => id !== task.id), task.id]);
+                  setCompletedTaskIds(prev => prev.filter(id => id !== task.id));
+                }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-sans-ui transition-all ${isFailed ? 'bg-destructive/20 border border-destructive text-destructive' : 'border border-border text-muted-foreground hover:border-destructive/30'}`}>
+                  <XCircle className="w-4 h-4" /> لم أنجز
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <button onClick={goNext}
+        disabled={axisPending.some(t => !completedTaskIds.includes(t.id) && !failedTaskIds.includes(t.id))}
+        className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-3.5 rounded-lg hover:opacity-90 transition-opacity shadow-sand disabled:opacity-50">
+        التالي
+      </button>
+    </div>
+  );
+
+  const renderReligiousRecoveryModal = () => {
+    if (!recoveryModal || recoveryModal.axisKey !== 'religious') return null;
+    const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
+
+    const quranOptions = [
+      { key: 'memorize', label: 'حفظ', unit: 'صفحة' },
+      { key: 'review', label: 'مراجعة', unit: 'صفحة' },
+      { key: 'read', label: 'قراءة', unit: 'صفحة' },
+    ];
+
+    const hasReligiousInput = () => {
+      if (religiousCategory === 'quran') {
+        return Object.entries(quranSelections).some(([key, selected]) =>
+          selected && parseFloat(quranQuantities[key] || '0') > 0
+        );
+      }
+      if (religiousCategory === 'knowledge') {
+        return knowledgeType && parseFloat(knowledgeQuantity || '0') > 0;
+      }
+      return false;
+    };
+
+    return (
+      <div className="space-y-4">
+        {/* Category selection */}
+        <p className="text-foreground text-sm text-center font-sans-ui font-bold">اختر نوع التعويض:</p>
+        <div className="flex gap-2">
+          <button onClick={() => { setReligiousCategory('quran'); setKnowledgeType(null); setKnowledgeQuantity(''); }}
+            className={`flex-1 py-3 rounded-xl border text-sm font-sans-ui transition-all ${religiousCategory === 'quran' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border bg-card text-foreground hover:border-primary/30'}`}>
+            قرآن
+          </button>
+          <button onClick={() => { setReligiousCategory('knowledge'); setQuranSelections({ memorize: false, review: false, read: false }); setQuranQuantities({ memorize: '', review: '', read: '' }); }}
+            className={`flex-1 py-3 rounded-xl border text-sm font-sans-ui transition-all ${religiousCategory === 'knowledge' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border bg-card text-foreground hover:border-primary/30'}`}>
+            علم شرعي
+          </button>
+        </div>
+
+        {/* Quran multi-select */}
+        {religiousCategory === 'quran' && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <p className="text-muted-foreground text-xs text-center font-sans-ui">اختر ما ستعوضه (يمكنك اختيار أكثر من واحد)</p>
+            {quranOptions.map(opt => (
+              <div key={opt.key} className="space-y-2">
+                <button
+                  onClick={() => setQuranSelections(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border text-sm font-sans-ui transition-all ${quranSelections[opt.key] ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card text-foreground hover:border-primary/30'}`}
+                >
+                  <span>{quranSelections[opt.key] ? '✓' : '○'}</span>
+                  <span>{opt.label}</span>
+                </button>
+                {quranSelections[opt.key] && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex gap-2 items-center px-2">
+                    <Input
+                      type="number"
+                      placeholder={`كم ${opt.unit} كانت المهمة الأصلية؟`}
+                      value={quranQuantities[opt.key]}
+                      onChange={(e) => setQuranQuantities(prev => ({ ...prev, [opt.key]: e.target.value }))}
+                      className="text-center text-sm flex-1"
+                      dir="rtl"
+                    />
+                    <span className="text-xs font-sans-ui text-muted-foreground whitespace-nowrap">{opt.unit}</span>
+                  </motion.div>
+                )}
+                {quranSelections[opt.key] && parseFloat(quranQuantities[opt.key] || '0') > 0 && (
+                  <p className="text-xs text-center font-sans-ui" style={{ color: '#8B0000' }}>
+                    التعويض: {Math.round(parseFloat(quranQuantities[opt.key]) * pct * 100) / 100} {opt.unit}
+                  </p>
+                )}
+              </div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* Knowledge options */}
+        {religiousCategory === 'knowledge' && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className="flex gap-2">
+              <button onClick={() => setKnowledgeType('lectures')}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-sans-ui transition-all ${knowledgeType === 'lectures' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border bg-card text-foreground hover:border-primary/30'}`}>
+                محاضرات
+              </button>
+              <button onClick={() => setKnowledgeType('books')}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-sans-ui transition-all ${knowledgeType === 'books' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border bg-card text-foreground hover:border-primary/30'}`}>
+                كتب
+              </button>
+            </div>
+            {knowledgeType && (
+              <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2 items-center">
+                <Input
+                  type="number"
+                  placeholder={`كم ${knowledgeType === 'lectures' ? 'دقيقة' : 'صفحة'} كانت المهمة الأصلية؟`}
+                  value={knowledgeQuantity}
+                  onChange={(e) => setKnowledgeQuantity(e.target.value)}
+                  className="text-center text-sm flex-1"
+                  dir="rtl"
+                />
+                <span className="text-xs font-sans-ui text-muted-foreground whitespace-nowrap">
+                  {knowledgeType === 'lectures' ? 'دقيقة' : 'صفحة'}
+                </span>
+              </motion.div>
+            )}
+            {knowledgeType && parseFloat(knowledgeQuantity || '0') > 0 && (
+              <p className="text-xs text-center font-sans-ui" style={{ color: '#8B0000' }}>
+                التعويض: {Math.round(parseFloat(knowledgeQuantity) * pct * 100) / 100} {knowledgeType === 'lectures' ? 'دقيقة' : 'صفحة'}
+              </p>
+            )}
+          </motion.div>
+        )}
+
+        {/* Summary */}
+        {hasReligiousInput() && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <p className="text-center text-sm font-sans-ui font-bold" style={{ color: '#8B0000' }}>
+              سيتم سؤالك عن هذه المهام غدًا للحفاظ على تقدم التزام قوي
+            </p>
+          </motion.div>
+        )}
+      </div>
+    );
+  };
+
+  const isDone = currentStep === 'done';
 
   return (
     <div className="min-h-screen gradient-desert flex items-center justify-center px-4 sm:px-6 py-12 pb-28" dir="rtl">
@@ -201,7 +436,6 @@ const DailyProgress = () => {
               <h2 className="font-serif-display text-3xl font-semibold text-foreground mb-2">{totalScore}/40</h2>
               <p className="text-muted-foreground text-lg mb-6 italic max-w-sm mx-auto">"{message}"</p>
 
-              {/* Score Breakdown */}
               {(() => {
                 const distractionEntry = distraction ? getDistractionScore(distraction) : null;
                 const mentalScore = mentalStatus ? getAxisScore(mentalStatus, maxScores.mental) : null;
@@ -263,71 +497,71 @@ const DailyProgress = () => {
               </button>
             </motion.div>
           ) : (
-            <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
+            <motion.div key={currentStep} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
               {/* Progress bar */}
               <div className="flex justify-center gap-1.5 mb-8">
-                {Array.from({ length: totalSteps - 1 }).map((_, i) => (
-                  <div key={i} className={`h-1 flex-1 rounded-full max-w-8 transition-colors ${i <= step ? 'bg-primary' : 'bg-border'}`} />
+                {Array.from({ length: totalStepsCount }).map((_, i) => (
+                  <div key={i} className={`h-1 flex-1 rounded-full max-w-8 transition-colors ${i <= currentStepIndex ? 'bg-primary' : 'bg-border'}`} />
                 ))}
               </div>
 
-              {/* Step 0: Distractions */}
-              {step === 0 && (
+              {/* Distraction step */}
+              {currentStep === 'distraction' && (
                 <div>
-                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">هل عرضت نفسك لمشتتات اليوم؟</h2>
-                   <div className="space-y-3">
-                     {distractionTiers.map(tier => {
-                        const isActive = pendingSelection === `dist-${tier}`;
-                        return (
-                          <button key={tier} tabIndex={-1} onClick={() => selectWithDelay(`dist-${tier}`, () => { 
-                            setDistraction(tier); 
-                            if (tier === 'none') {
-                              setDistractionType(null);
-                              setStep(mentalStep);
-                            } else {
-                              setStep(1);
-                            }
-                          })}
-                            className={`w-full text-right p-4 rounded-xl border transition-all duration-200 outline-none ring-0 ${isActive ? 'border-primary bg-primary/15 scale-[1.03] shadow-sand' : distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30 active:scale-[0.98]'}`}>
-                            <div className="flex items-center justify-center gap-2">
-                              {isActive && <span className="text-primary text-lg">✓</span>}
-                              <span className={`text-sm font-sans-ui ${isActive ? 'text-primary font-semibold' : 'text-foreground'}`}>{DISTRACTION_LABELS[tier]}</span>
-                            </div>
-                          </button>
-                        );
-                      })}
+                  <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">هل عرضت نفسك لمشتتات اليوم؟</h2>
+                  <div className="space-y-3">
+                    {distractionTiers.map(tier => {
+                      const isActive = pendingSelection === `dist-${tier}`;
+                      return (
+                        <button key={tier} tabIndex={-1} onClick={() => selectWithDelay(`dist-${tier}`, () => {
+                          setDistraction(tier);
+                          if (tier === 'none') {
+                            setDistractionType(null);
+                            setCurrentStep('mental');
+                          } else {
+                            setCurrentStep('distraction_type');
+                          }
+                        })}
+                          className={`w-full text-right p-4 rounded-xl border transition-all duration-200 outline-none ring-0 ${isActive ? 'border-primary bg-primary/15 scale-[1.03] shadow-sand' : distraction === tier ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30 active:scale-[0.98]'}`}>
+                          <div className="flex items-center justify-center gap-2">
+                            {isActive && <span className="text-primary text-lg">✓</span>}
+                            <span className={`text-sm font-sans-ui ${isActive ? 'text-primary font-semibold' : 'text-foreground'}`}>{DISTRACTION_LABELS[tier]}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              {/* Step 1: Distraction Type (only if distraction !== none) */}
-              {step === 1 && hasDistractionTypeStep && (
+              {/* Distraction type step */}
+              {currentStep === 'distraction_type' && (
                 <div>
-                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">ما نوع المشتت؟</h2>
-                   <div className="space-y-3">
-                     {distractionTypes.map(type => {
-                        const isActive = pendingSelection === `dtype-${type}`;
-                        return (
-                          <button key={type} tabIndex={-1} onClick={() => selectWithDelay(`dtype-${type}`, () => { setDistractionType(type); setStep(mentalStep); })}
-                            className={`w-full text-right p-4 rounded-xl border transition-all duration-200 outline-none ring-0 ${isActive ? 'border-primary bg-primary/15 scale-[1.03] shadow-sand' : distractionType === type ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30 active:scale-[0.98]'}`}>
-                            <div className="flex items-center justify-center gap-2">
-                              {isActive && <span className="text-primary text-lg">✓</span>}
-                              <span className={`text-sm font-sans-ui ${isActive ? 'text-primary font-semibold' : 'text-foreground'}`}>{DISTRACTION_TYPE_LABELS[type]}</span>
-                            </div>
-                          </button>
-                        );
-                      })}
+                  <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">ما نوع المشتت؟</h2>
+                  <div className="space-y-3">
+                    {distractionTypes.map(type => {
+                      const isActive = pendingSelection === `dtype-${type}`;
+                      return (
+                        <button key={type} tabIndex={-1} onClick={() => selectWithDelay(`dtype-${type}`, () => { setDistractionType(type); setCurrentStep('mental'); })}
+                          className={`w-full text-right p-4 rounded-xl border transition-all duration-200 outline-none ring-0 ${isActive ? 'border-primary bg-primary/15 scale-[1.03] shadow-sand' : distractionType === type ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/30 active:scale-[0.98]'}`}>
+                          <div className="flex items-center justify-center gap-2">
+                            {isActive && <span className="text-primary text-lg">✓</span>}
+                            <span className={`text-sm font-sans-ui ${isActive ? 'text-primary font-semibold' : 'text-foreground'}`}>{DISTRACTION_TYPE_LABELS[type]}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              {/* Axes steps */}
-              {[mentalStep, physicalStep, religiousStep].includes(step) && (() => {
-                const axisIndex = step === mentalStep ? 0 : step === physicalStep ? 1 : 2;
-                const axisKey = (['mental', 'physical', 'religious'] as const)[axisIndex];
-                const currentStatus = axisIndex === 0 ? mentalStatus : axisIndex === 1 ? physicalStatus : religiousStatus;
-                const setter = axisIndex === 0 ? setMentalStatus : axisIndex === 1 ? setPhysicalStatus : setReligiousStatus;
-                
+              {/* Axis steps */}
+              {(['mental', 'physical', 'religious'] as const).includes(currentStep as any) && (() => {
+                const axisKey = currentStep as 'mental' | 'physical' | 'religious';
+                const axisIndex = axisKey === 'mental' ? 0 : axisKey === 'physical' ? 1 : 2;
+                const currentStatus = axisKey === 'mental' ? mentalStatus : axisKey === 'physical' ? physicalStatus : religiousStatus;
+                const setter = axisKey === 'mental' ? setMentalStatus : axisKey === 'physical' ? setPhysicalStatus : setReligiousStatus;
+
                 const handleAxisSelect = (sel: TaskStatus) => {
                   setter(sel);
                   if (sel === 'minor_lack' || sel === 'major_lack') {
@@ -337,16 +571,30 @@ const DailyProgress = () => {
                     setRecoveryTaskDesc("");
                     setRecoveryDetectedUnit(null);
                     setRecoveryResult(null);
+                    resetReligiousRecovery();
                   } else {
-                    setStep(step + 1);
+                    goToNextFromAxis(axisKey);
                   }
+                };
+
+                const dismissRecoveryAndProceed = () => {
+                  saveRecoveryInfoForAxis(axisKey);
+                  setRecoveryModal(null);
+                  goToNextFromAxis(axisKey);
+                };
+
+                const skipRecovery = () => {
+                  setRecoveryModal(null);
+                  setRecoveryInput("");
+                  setRecoveryResult(null);
+                  resetReligiousRecovery();
+                  goToNextFromAxis(axisKey);
                 };
 
                 return (
                   <div>
                     <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المحور {axisIndex + 1}/3</p>
                     <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-2 text-center">{AXIS_LABELS[axisKey]}</h2>
-                    
                     <p className="text-muted-foreground text-sm mb-6 text-center">ما نسبة إتمامك لمهام هذا المحور اليوم؟</p>
                     <div className="space-y-3">
                       {taskStatuses.map(s => renderStatusOption(s, currentStatus, handleAxisSelect, axisKey))}
@@ -364,111 +612,97 @@ const DailyProgress = () => {
                           <div className="flex items-center justify-center gap-2 text-destructive">
                             <AlertTriangle className="w-5 h-5" />
                             <p className="text-sm font-sans-ui font-semibold">
-                              لقد خسرت {recoveryModal.pointsLost} نقاط بسبب {recoveryModal.status === 'minor_lack' ? 'نقص بسيط' : 'نقص كبير'} في المهام
+                              لقد خسرت {recoveryModal.pointsLost} نقاط بسبب {recoveryModal.status === 'minor_lack' ? 'نقص بسيط' : 'نقص كبير'}
                             </p>
                           </div>
                           <p className="text-muted-foreground text-sm text-center font-sans-ui">
                             يمكنك تعويض النقاط في اليوم التالي
                           </p>
-                          <p className="text-foreground text-sm text-center font-sans-ui font-bold">
-                            اكتب المهمة التي ستعوض بها وسأحدد الوحدة تلقائيًا
-                          </p>
-                          {/* Task description input */}
-                          <Input
-                            type="text"
-                            placeholder={
-                              axisKey === 'mental' ? "مثال: مذاكرة، مراجعة، حل أسئلة، محاضرات..." :
-                              axisKey === 'physical' ? "مثال: ضغط، كارديو، مشي، تمرين..." :
-                              "مثال: قرآن، أذكار، علم شرعي، صلاة..."
-                            }
-                            value={recoveryTaskDesc}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setRecoveryTaskDesc(val);
-                              const detected = detectUnitFromTask(val);
-                              setRecoveryDetectedUnit(detected);
-                              setRecoveryInput("");
-                              setRecoveryResult(null);
-                            }}
-                            className="text-center text-base"
-                            dir="rtl"
-                          />
 
-                          {/* Detected unit badge */}
-                          {recoveryDetectedUnit && (
-                            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-                              <span className="inline-block bg-primary/10 text-primary text-xs font-sans-ui px-3 py-1.5 rounded-full">
-                                ✓ الوحدة: {recoveryDetectedUnit.unitLabel}
-                              </span>
-                            </motion.div>
-                          )}
-
-                          {recoveryTaskDesc && !recoveryDetectedUnit && (
-                            <p className="text-xs text-muted-foreground text-center font-sans-ui">
-                              لم أتعرف على نوع المهمة، جرّب كلمات مثل: قراءة، ضغط، قرآن، أذكار، جري...
-                            </p>
-                          )}
-
-                          {/* Quantity input appears after detection */}
-                          {recoveryDetectedUnit && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2 items-center">
+                          {/* Religious: structured selection */}
+                          {axisKey === 'religious' ? (
+                            renderReligiousRecoveryModal()
+                          ) : (
+                            <>
+                              <p className="text-foreground text-sm text-center font-sans-ui font-bold">
+                                اكتب المهمة التي ستعوض بها وسأحدد الوحدة تلقائيًا
+                              </p>
                               <Input
-                                type="number"
-                                placeholder={`كم ${recoveryDetectedUnit.unitLabel}؟`}
-                                value={recoveryInput}
+                                type="text"
+                                placeholder={
+                                  axisKey === 'mental' ? "مثال: مذاكرة، مراجعة، حل أسئلة، محاضرات..." :
+                                  "مثال: ضغط، جري، كارديو..."
+                                }
+                                value={recoveryTaskDesc}
                                 onChange={(e) => {
-                                  setRecoveryInput(e.target.value);
-                                  const num = parseFloat(e.target.value);
-                                  if (!isNaN(num) && num > 0 && recoveryDetectedUnit) {
-                                    const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
-                                    const result = Math.round(num * pct * 100) / 100;
-                                    setRecoveryResult({ value: result, unit: recoveryDetectedUnit.unitLabel });
-                                  } else {
-                                    setRecoveryResult(null);
-                                  }
+                                  const val = e.target.value;
+                                  setRecoveryTaskDesc(val);
+                                  const detected = detectUnitFromTask(val);
+                                  setRecoveryDetectedUnit(detected);
+                                  setRecoveryInput("");
+                                  setRecoveryResult(null);
                                 }}
-                                className="text-center text-lg flex-1"
+                                className="text-center text-base"
                                 dir="rtl"
                               />
-                              <span className="text-sm font-sans-ui text-muted-foreground whitespace-nowrap">
-                                {recoveryDetectedUnit.unitLabel}
-                              </span>
-                            </motion.div>
-                          )}
-                          {recoveryResult !== null && (
-                            <>
-                              <motion.p
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="text-center text-sm font-sans-ui font-bold"
-                                style={{ color: '#8B0000' }}
-                              >
-                                عليك غدًا تعويض {recoveryResult.value} {recoveryResult.unit} من المهمة لاسترجاع النقاط والحفاظ على تقدم التزام قوي
-                              </motion.p>
-                              <p className="text-center text-xs font-sans-ui text-muted-foreground mt-1">
-                                📋 سيتم سؤالك عن هذه المهمة غدًا في قسم <span className="font-bold text-foreground">المهام التعويضية</span>
-                              </p>
+                              {recoveryDetectedUnit && (
+                                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+                                  <span className="inline-block bg-primary/10 text-primary text-xs font-sans-ui px-3 py-1.5 rounded-full">
+                                    ✓ الوحدة: {recoveryDetectedUnit.unitLabel}
+                                  </span>
+                                </motion.div>
+                              )}
+                              {recoveryTaskDesc && !recoveryDetectedUnit && (
+                                <p className="text-xs text-muted-foreground text-center font-sans-ui">
+                                  لم أتعرف على نوع المهمة، جرّب كلمات مثل: قراءة، ضغط، جري، كارديو...
+                                </p>
+                              )}
+                              {recoveryDetectedUnit && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2 items-center">
+                                  <Input
+                                    type="number"
+                                    placeholder={`كم ${recoveryDetectedUnit.unitLabel}؟`}
+                                    value={recoveryInput}
+                                    onChange={(e) => {
+                                      setRecoveryInput(e.target.value);
+                                      const num = parseFloat(e.target.value);
+                                      if (!isNaN(num) && num > 0 && recoveryDetectedUnit) {
+                                        const pct = recoveryModal.status === 'minor_lack' ? 0.15 : 0.35;
+                                        const result = Math.round(num * pct * 100) / 100;
+                                        setRecoveryResult({ value: result, unit: recoveryDetectedUnit.unitLabel });
+                                      } else {
+                                        setRecoveryResult(null);
+                                      }
+                                    }}
+                                    className="text-center text-lg flex-1"
+                                    dir="rtl"
+                                  />
+                                  <span className="text-sm font-sans-ui text-muted-foreground whitespace-nowrap">
+                                    {recoveryDetectedUnit.unitLabel}
+                                  </span>
+                                </motion.div>
+                              )}
+                              {recoveryResult !== null && (
+                                <>
+                                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                    className="text-center text-sm font-sans-ui font-bold" style={{ color: '#8B0000' }}>
+                                    عليك غدًا تعويض {recoveryResult.value} {recoveryResult.unit} لاسترجاع النقاط
+                                  </motion.p>
+                                  <p className="text-center text-xs font-sans-ui text-muted-foreground mt-1">
+                                    📋 سيتم سؤالك عن هذه المهمة غدًا
+                                  </p>
+                                </>
+                              )}
                             </>
                           )}
+
                           <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                setRecoveryModal(null);
-                                setStep(step + 1);
-                              }}
-                              className="flex-1 gradient-sand text-primary-foreground font-sans-ui font-medium py-3 rounded-lg hover:opacity-90 transition-opacity"
-                            >
+                            <button onClick={dismissRecoveryAndProceed}
+                              className="flex-1 gradient-sand text-primary-foreground font-sans-ui font-medium py-3 rounded-lg hover:opacity-90 transition-opacity">
                               متابعة للتعويض
                             </button>
-                            <button
-                              onClick={() => {
-                                setRecoveryModal(null);
-                                setRecoveryInput("");
-                                setRecoveryResult(null);
-                                setStep(step + 1);
-                              }}
-                              className="flex-1 border border-destructive text-destructive font-sans-ui font-medium py-3 rounded-lg hover:bg-destructive/10 transition-colors"
-                            >
+                            <button onClick={skipRecovery}
+                              className="flex-1 border border-destructive text-destructive font-sans-ui font-medium py-3 rounded-lg hover:bg-destructive/10 transition-colors">
                               عدم التعويض
                             </button>
                           </div>
@@ -479,49 +713,13 @@ const DailyProgress = () => {
                 );
               })()}
 
-              {/* Appended Tasks step */}
-              {step === appendedStep && hasAppendedStep && (
-                <div>
-                  <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">المهام التعويضية</p>
-                  <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">مهام مُلحقة من أيام سابقة</h2>
-                  <div className="space-y-3 mb-6">
-                    {pendingTasks.map(task => {
-                      const isCompleted = completedTaskIds.includes(task.id);
-                      const isFailed = failedTaskIds.includes(task.id);
-                      return (
-                        <div key={task.id} className="bg-card border border-border rounded-xl p-4">
-                          <p className="text-foreground text-sm mb-1 font-sans-ui">{AXIS_LABELS[task.axis_type]}</p>
-                          <p className="text-muted-foreground text-xs mb-3">يمكن استرجاع {task.points_to_reclaim} نقطة ({task.reclaim_percentage}%)</p>
-                          <div className="flex gap-2">
-                            <button onClick={() => {
-                              setCompletedTaskIds(prev => [...prev.filter(id => id !== task.id), task.id]);
-                              setFailedTaskIds(prev => prev.filter(id => id !== task.id));
-                            }}
-                              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-sans-ui transition-all ${isCompleted ? 'bg-accent/20 border border-accent text-accent' : 'border border-border text-muted-foreground hover:border-accent/30'}`}>
-                              <CheckCircle2 className="w-4 h-4" /> أنجزت
-                            </button>
-                            <button onClick={() => {
-                              setFailedTaskIds(prev => [...prev.filter(id => id !== task.id), task.id]);
-                              setCompletedTaskIds(prev => prev.filter(id => id !== task.id));
-                            }}
-                              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-sans-ui transition-all ${isFailed ? 'bg-destructive/20 border border-destructive text-destructive' : 'border border-border text-muted-foreground hover:border-destructive/30'}`}>
-                              <XCircle className="w-4 h-4" /> لم أنجز
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <button onClick={() => setStep(noteStep)}
-                    disabled={pendingTasks.some(t => !completedTaskIds.includes(t.id) && !failedTaskIds.includes(t.id))}
-                    className="w-full gradient-sand text-primary-foreground font-sans-ui font-medium py-3.5 rounded-lg hover:opacity-90 transition-opacity shadow-sand disabled:opacity-50">
-                    التالي
-                  </button>
-                </div>
-              )}
+              {/* Per-axis recovery steps */}
+              {currentStep === 'mental_recovery' && renderRecoveryStep('mental', mentalPending)}
+              {currentStep === 'physical_recovery' && renderRecoveryStep('physical', physicalPending)}
+              {currentStep === 'religious_recovery' && renderRecoveryStep('religious', religiousPending)}
 
               {/* Note step */}
-              {step === noteStep && (
+              {currentStep === 'note' && (
                 <div>
                   <p className="text-dust text-sm tracking-[0.2em] mb-2 font-sans-ui text-center">تأمل</p>
                   <h2 className="font-serif-display text-2xl font-semibold text-foreground mb-6 text-center">ما أهم شيء تعلمته اليوم؟</h2>
@@ -539,16 +737,8 @@ const DailyProgress = () => {
               )}
 
               {/* Back button */}
-              {step > 0 && !isDone && (
-                <button onClick={() => {
-                  if (step === mentalStep && !hasDistractionTypeStep) {
-                    setStep(0);
-                  } else if (step === noteStep && !hasAppendedStep) {
-                    setStep(religiousStep);
-                  } else {
-                    setStep(step - 1);
-                  }
-                }}
+              {currentStep !== 'distraction' && !isDone && (
+                <button onClick={goBack}
                   className="w-full mt-3 text-muted-foreground text-sm font-sans-ui py-2 hover:text-foreground transition-colors">
                   رجوع
                 </button>
